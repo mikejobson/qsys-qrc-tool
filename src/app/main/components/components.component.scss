@@ -1,0 +1,17 @@
+:host {
+  display: flex;
+  flex-direction: row;
+  height: 100%;
+  gap: 1rem;
+  padding: 2rem;
+}
+
+.tree {
+  border-right: 1px solid var(--mat-sys-outline);
+  padding: 0 10px;
+  min-width: 200px;
+}
+
+.content {
+  flex: 1;
+}

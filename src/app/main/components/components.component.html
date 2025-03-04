@@ -1,0 +1,34 @@
+<div class="tree">
+  <mat-tree [dataSource]="dataSource" [treeControl]="treeControl">
+    <!-- Leaf nodes without children -->
+    <mat-tree-node *matTreeNodeDef="let node" matTreeNodePadding>
+      <span>{{ node.item }}</span>
+    </mat-tree-node>
+
+    <!-- Expandable nodes -->
+    <mat-tree-node
+      *matTreeNodeDef="let node; when: hasChild"
+      matTreeNodePadding
+    >
+      <button
+        mat-icon-button
+        [attr.aria-label]="'Toggle ' + node.item"
+        matTreeNodeToggle
+      >
+        <fa-icon
+          *ngIf="!node.isLoading()"
+          [icon]="node.isExpanded ? faCaretDown : faCaretRight"
+          size="2x"
+        ></fa-icon>
+        <fa-icon
+          *ngIf="node.isLoading()"
+          [icon]="faSpinner"
+          size="2x"
+          animation="spin"
+        ></fa-icon>
+      </button>
+      <span>{{ node.item }}</span>
+    </mat-tree-node>
+  </mat-tree>
+</div>
+<div class="content">Content</div>

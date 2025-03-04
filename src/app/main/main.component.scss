@@ -1,32 +1,5 @@
 :host {
   display: flex;
   flex-direction: column;
-  align-items: center;
-  justify-content: center;
   height: 100%;
-}
-
-mat-card-header {
-  padding: 20px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-mat-card-content {
-  display: flex;
-  flex-direction: column;
-  justify-content: center;
-  align-items: center;
-  gap: 1rem;
-}
-
-table {
-  padding: 0 1rem;
-
-  tr td:first-child {
-    font-weight: bold;
-    padding-right: 1rem;
-    text-align: right;
-  }
 }
