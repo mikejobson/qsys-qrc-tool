@@ -1,34 +1,56 @@
 <div class="tree">
-  <mat-tree [dataSource]="dataSource" [treeControl]="treeControl">
-    <!-- Leaf nodes without children -->
-    <mat-tree-node *matTreeNodeDef="let node" matTreeNodePadding>
-      <span>{{ node.item }}</span>
+  <mat-tree
+    [dataSource]="dataSource"
+    [treeControl]="treeControl"
+    class="component-tree"
+  >
+    <!-- Leaf node -->
+    <mat-tree-node
+      *matTreeNodeDef="let node"
+      matTreeNodePadding
+      matTreeNodePaddingIndent="20px"
+    >
+      <button mat-icon-button disabled></button>
+      @if(node.nodeType == NodeType.Control) {
+      <button
+        mat-button
+        [ngClass]="getNodeClass(node)"
+        (click)="selectControl(node)"
+      >
+        {{ node.item }}
+      </button>
+      } @else {
+      <span [ngClass]="getNodeClass(node)">{{ node.item }}</span>
+      }
     </mat-tree-node>
 
-    <!-- Expandable nodes -->
+    <!-- Expandable node -->
     <mat-tree-node
       *matTreeNodeDef="let node; when: hasChild"
       matTreeNodePadding
+      matTreeNodePaddingIndent="20px"
     >
       <button
         mat-icon-button
-        [attr.aria-label]="'Toggle ' + node.item"
         matTreeNodeToggle
+        [attr.aria-label]="'Toggle ' + node.item"
       >
         <fa-icon
-          *ngIf="!node.isLoading()"
-          [icon]="node.isExpanded ? faCaretDown : faCaretRight"
-          size="2x"
+          [icon]="faSpinner"
+          animation="spin"
+          *ngIf="node.isLoading()"
         ></fa-icon>
         <fa-icon
-          *ngIf="node.isLoading()"
-          [icon]="faSpinner"
-          size="2x"
-          animation="spin"
+          [icon]="treeControl.isExpanded(node) ? faCaretDown : faCaretRight"
+          *ngIf="!node.isLoading()"
         ></fa-icon>
       </button>
-      <span>{{ node.item }}</span>
+      <span [ngClass]="getNodeClass(node)">{{ node.item }}</span>
     </mat-tree-node>
   </mat-tree>
 </div>
-<div class="content">Content</div>
+<div class="content">
+  @if(selectedControl) {
+  <pre>{{ selectedControl | json }}</pre>
+  }
+</div>

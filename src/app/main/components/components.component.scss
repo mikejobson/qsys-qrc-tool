@@ -3,15 +3,43 @@
   flex-direction: row;
   height: 100%;
   gap: 1rem;
-  padding: 2rem;
 }
 
 .tree {
-  border-right: 1px solid var(--mat-sys-outline);
-  padding: 0 10px;
-  min-width: 200px;
+  // border-right: 1px solid var(--mat-sys-outline);
+  min-width: 300px;
+  background: var(--mat-sys-surface-container-low);
 }
 
 .content {
   flex: 1;
+}
+
+mat-tree {
+  background-color: unset;
+}
+
+.component-tree {
+  border-radius: 4px;
+  padding: 8px;
+  margin-top: 16px;
+}
+
+.node-component {
+  font-weight: bold;
+  color: #2c3e50;
+}
+
+.node-properties-group {
+  font-weight: bold;
+  color: #16a085;
+}
+
+.node-control {
+  color: #3498db;
+}
+
+.node-property {
+  color: #8e44ad;
+  font-style: italic;
 }

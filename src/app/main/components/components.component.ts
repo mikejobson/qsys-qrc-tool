@@ -1,13 +1,20 @@
 import { CommonModule } from '@angular/common';
 import { ChangeDetectionStrategy, ChangeDetectorRef, Component, inject, OnDestroy, signal, type OnInit } from '@angular/core';
 import { QsysComponent, QsysLibService } from 'qsys-lib';
-import { BehaviorSubject, map, Observable, Subject } from 'rxjs';
+import { BehaviorSubject, map, Observable, Subject, Subscription } from 'rxjs';
 import { MatTreeModule } from '@angular/material/tree';
 import { CollectionViewer, DataSource, SelectionChange } from '@angular/cdk/collections';
 import { FlatTreeControl } from '@angular/cdk/tree';
 import { FontAwesomeModule } from '@fortawesome/angular-fontawesome';
 import { faSpinner, faCaretRight, faCaretDown } from '@fortawesome/free-solid-svg-icons';
 import { MatButtonModule } from '@angular/material/button';
+
+export enum NodeType {
+  Component,
+  PropertiesGroup,
+  Control,
+  Property
+}
 
 export class DynamicFlatNode {
   constructor(
@@ -16,12 +23,15 @@ export class DynamicFlatNode {
     public expandable = false,
     public isLoading = signal(false),
     public component?: QsysComponent,
+    public nodeType: NodeType = NodeType.Component,
+    public data?: any // For storing properties or controls
   ) { }
 }
 
 export class DynamicDataSource implements DataSource<DynamicFlatNode> {
   private _dataChange = new BehaviorSubject<DynamicFlatNode[]>([]);
   private api: QsysLibService;
+  private subscription?: Subscription; // Track subscription
 
   constructor(private treeControl: FlatTreeControl<DynamicFlatNode>, api: QsysLibService) {
     this.api = api;
@@ -30,20 +40,34 @@ export class DynamicDataSource implements DataSource<DynamicFlatNode> {
   get data(): DynamicFlatNode[] {
     return this._dataChange.value;
   }
+
   set data(value: DynamicFlatNode[]) {
     this._dataChange.next(value);
   }
 
   connect(collectionViewer: CollectionViewer): Observable<readonly DynamicFlatNode[]> {
-    this.treeControl.expansionModel.changed
+    // Clean up any previous subscription to avoid duplicate handlers
+    if (this.subscription) {
+      this.subscription.unsubscribe();
+    }
+
+    // Create new subscription
+    this.subscription = this.treeControl.expansionModel.changed
       .subscribe(change => {
         if (change.added || change.removed) {
           this.handleTreeControl(change);
         }
       });
+
     return this._dataChange;
   }
+
   disconnect(collectionViewer: CollectionViewer): void {
+    // Clean up subscription when disconnected
+    if (this.subscription) {
+      this.subscription.unsubscribe();
+      this.subscription = undefined;
+    }
   }
 
   handleTreeControl(change: SelectionChange<DynamicFlatNode>) {
@@ -62,11 +86,25 @@ export class DynamicDataSource implements DataSource<DynamicFlatNode> {
     if (index < 0) return;
 
     if (expand) {
-      // Node is being expanded - load its child controls
+      // Node is being expanded
       node.isLoading.set(true);
-      // For component nodes, load controls
-      if (node.component) {
-        this.loadComponentControls(node, index);
+
+      // Handle different node types
+      switch (node.nodeType) {
+        case NodeType.Component:
+          // Load controls for component
+          if (node.component) {
+            this.loadComponentControls(node, index);
+          }
+          break;
+
+        case NodeType.PropertiesGroup:
+          // Load properties for component
+          this.loadComponentProperties(node, index);
+          break;
+
+        default:
+          node.isLoading.set(false);
       }
     } else {
       // Node is being collapsed - remove all children
@@ -85,15 +123,32 @@ export class DynamicDataSource implements DataSource<DynamicFlatNode> {
       const controls = await this.api.getControls(node.component.Name);
       node.isLoading.set(false);
 
-      // Create child nodes for controls
       const nodes: DynamicFlatNode[] = [];
+
+      // Add Properties group node if component has properties
+      if (node.component.Properties && node.component.Properties.length > 0) {
+        const propertiesNode = new DynamicFlatNode(
+          `Properties (${node.component.Properties.length})`,
+          node.level + 1,
+          true, // Expandable
+          signal(false),
+          node.component, // Pass component reference to properties group
+          NodeType.PropertiesGroup
+        );
+        nodes.push(propertiesNode);
+      }
+
+      // Add control nodes
       if (controls && controls.length > 0) {
         controls.forEach(control => {
           const childNode = new DynamicFlatNode(
             `${control.Name}: ${control.Value}`,
             node.level + 1,
             false,
-            signal(false)
+            signal(false),
+            node.component, // Pass the parent component reference to each control node
+            NodeType.Control,
+            control
           );
           nodes.push(childNode);
         });
@@ -108,7 +163,43 @@ export class DynamicDataSource implements DataSource<DynamicFlatNode> {
     }
   }
 
+  // Add a new method to load properties
+  private async loadComponentProperties(node: DynamicFlatNode, index: number) {
+    try {
+      if (!node.component || node.nodeType !== NodeType.PropertiesGroup) return;
+
+      node.isLoading.set(false);
+      const properties = node.component.Properties;
+
+      const nodes: DynamicFlatNode[] = [];
+      if (properties && properties.length > 0) {
+        properties.forEach(property => {
+          const childNode = new DynamicFlatNode(
+            `${property.Name}: ${property.Value}`,
+            node.level + 1,
+            false,
+            signal(false),
+            node.component, // Pass the parent component reference
+            NodeType.Property,
+            property
+          );
+          nodes.push(childNode);
+        });
+      }
+
+      // Insert the new nodes after the parent
+      this.data.splice(index + 1, 0, ...nodes);
+      this._dataChange.next(this.data);
+    } catch (error) {
+      console.error('Error loading properties:', error);
+      node.isLoading.set(false);
+    }
+  }
+
   initializeWithComponents(components: QsysComponent[]) {
+    // First clear any existing data
+    this._dataChange.next([]);
+
     // Convert components to flat nodes
     const data = components.map(component => {
       return new DynamicFlatNode(
@@ -116,7 +207,8 @@ export class DynamicDataSource implements DataSource<DynamicFlatNode> {
         0,
         true, // All components are expandable
         signal(false),
-        component
+        component,
+        NodeType.Component
       );
     });
 
@@ -148,6 +240,8 @@ export class ComponentsComponent implements OnInit, OnDestroy {
   faSpinner = faSpinner;
   faCaretRight = faCaretRight;
   faCaretDown = faCaretDown;
+  NodeType = NodeType; // Make enum available in template
+  loading = false;
 
   treeControl = new FlatTreeControl<DynamicFlatNode>(
     node => node.level,
@@ -155,6 +249,7 @@ export class ComponentsComponent implements OnInit, OnDestroy {
   );
 
   dataSource: DynamicDataSource;
+  selectedControl: any;
 
   constructor() {
     this.dataSource = new DynamicDataSource(this.treeControl, this.api);
@@ -171,11 +266,40 @@ export class ComponentsComponent implements OnInit, OnDestroy {
 
   hasChild = (_: number, node: DynamicFlatNode) => node.expandable;
 
+  getNodeClass(node: DynamicFlatNode): string {
+    switch (node.nodeType) {
+      case NodeType.Component:
+        return 'node-component';
+      case NodeType.PropertiesGroup:
+        return 'node-properties-group';
+      case NodeType.Control:
+        return 'node-control';
+      case NodeType.Property:
+        return 'node-property';
+      default:
+        return '';
+    }
+  }
+
   async updateComponents() {
-    this.components = await this.api.getComponents(false);
-    console.log(this.components);
-    this.dataSource.initializeWithComponents(this.components);
-    this.cd.markForCheck();
+    try {
+      this.loading = true;
+      this.components = await this.api.getComponents();
+      console.log(this.components);
+      this.dataSource.initializeWithComponents(this.components);
+    } catch (error) {
+      console.error('Error loading components:', error);
+    } finally {
+      this.loading = false;
+      this.cd.markForCheck();
+    }
+  }
+
+  selectControl(node: DynamicFlatNode) {
+    if (node.nodeType === NodeType.Control) {
+      console.log('Selected control:', node.data);
+      this.selectedControl = { component: node.component?.Name, ...node.data };
+    }
   }
 
 }
