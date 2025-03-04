@@ -38,3 +38,15 @@ body {
   margin: 0;
   font-family: Roboto, "Helvetica Neue", sans-serif;
 }
+
+.space {
+  display: flex;
+
+  &.column {
+    flex-direction: column;
+  }
+
+  &.align-center {
+    align-items: center;
+  }
+}

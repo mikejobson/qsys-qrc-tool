@@ -5,10 +5,17 @@ import { catchError, switchMap, takeUntil, tap, filter, retry, take, timeout, ma
 
 export interface QsysEngineStatus {
   State: string;
+  Platform: string;
   DesignName: string;
   DesignCode: string;
   IsRedundant: boolean;
   IsEmulator: boolean;
+  Status: QsysEngineStatusStatus;
+}
+
+export interface QsysEngineStatusStatus {
+  Code: number;
+  String: string;
 }
 
 export interface QsysConnectionStatus {
