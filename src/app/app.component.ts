@@ -48,7 +48,7 @@ export class AppComponent implements OnInit, OnDestroy {
 
   // Example of sending a command to the QSys Core
   async sendTestCommand(): Promise<void> {
-    let response = await this.qsysService.sendCommandAsync('StatusGet');
+    let response = await this.qsysService.getComponents(true);
     console.log('Response:', response);
   }
 

@@ -26,6 +26,35 @@ export interface QsysResponse {
   };
 }
 
+// New interfaces for Component response
+export interface QsysComponentProperty {
+  Name: string;
+  Value: string;
+  PrettyName: string;
+}
+
+export interface QsysComponent {
+  ControlSource: number;
+  Controls: QsysControl[] | undefined;
+  ID: string;
+  Name: string;
+  Type: string;
+  Properties: QsysComponentProperty[];
+}
+
+export interface QsysControl {
+  Name: string;
+  Type: string;
+  Value: any;
+  ValueMin: number;
+  ValueMax: number;
+  String: string;
+  StringMin: string;
+  StringMax: string;
+  Position: number;
+  Direction: string;
+}
+
 @Injectable({
   providedIn: 'root'
 })
@@ -231,6 +260,33 @@ export class QsysLibService implements OnDestroy {
           this.setupSocketConnection();
         }
       });
+  }
+
+  /**
+   * Get a list of all components in the current design
+   * @returns Promise with array of component information
+   */
+  public async getComponents(withControls: boolean = false): Promise<QsysComponent[]> {
+    const components = this.sendCommandAsync('Component.GetComponents');
+    if (withControls) {
+      return components.then(async (components) => {
+        for (const component of components) {
+          component.Controls = await this.getControls(component.Name);
+        }
+        return components;
+      });
+    }
+    return components;
+  }
+
+  /**
+   * Get a list of all controls for a component
+   * @param componentName The name of the component
+   * @returns Promise with array of control information
+   */
+  public async getControls(componentName: string): Promise<QsysControl[]> {
+    const response = await this.sendCommandAsync('Component.GetControls', { Name: componentName });
+    return response.Controls;
   }
 
   ngOnDestroy(): void {
