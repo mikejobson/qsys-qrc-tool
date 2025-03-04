@@ -75,6 +75,7 @@ export class QsysLibService implements OnDestroy {
 
   // Add private field for connection state
   private _isConnected = false;
+  private reconnecting = false; // Add this flag to track if reconnection is allowed
 
   private requestId = 0;
   private reconnectionAttempts = 0;
@@ -97,7 +98,11 @@ export class QsysLibService implements OnDestroy {
       console.error('Cannot connect: no IP address provided');
       return;
     }
+
+    // Allow reconnection attempts again
+    this.reconnecting = true;
     this.reconnectionAttempts = 0;
+
     if (this.isConnected) {
       console.log(`Waiting 1 second before connecting to QSys Core at ${this.coreAddress}...`);
       this.setupSocketConnection();
@@ -112,13 +117,29 @@ export class QsysLibService implements OnDestroy {
   }
 
   public disconnect(clearAddress: boolean = false): void {
+    // Prevent any further reconnection attempts
+    this.reconnecting = false;
+
+    // Cancel any pending reconnections
+    this.reconnectionAttempts = Number.MAX_SAFE_INTEGER;
+
+    // Close the websocket
+    if (this.socket$) {
+      this.socket$.complete();
+      this.socket$ = undefined;
+    }
+
+    // Update connection state
+    this._isConnected = false;
+    this.connectionStatus$.next({ connected: false });
+
+    // Clear address if requested
     if (clearAddress) {
       this.coreAddress = undefined;
     }
-    this.destroy$.next();
-    this.socket$?.complete();
-    this._isConnected = false;
-    this.connectionStatus$.next({ connected: false });
+
+    // Don't emit on destroy$ yet (this would terminate everything including this method)
+    // Instead, only emit if we're truly destroying the service
   }
 
   public set coreAddress(address: string | undefined) {
@@ -302,7 +323,14 @@ export class QsysLibService implements OnDestroy {
   }
 
   private attemptReconnection(): void {
-    if (this.reconnectionAttempts >= this.maxReconnectionAttempts && this.maxReconnectionAttempts > 0) {
+    // First check if reconnection is explicitly disabled
+    if (!this.reconnecting) {
+      console.log('Reconnection disabled, not attempting to reconnect');
+      return;
+    }
+
+    // Then check max attempts
+    if (this.maxReconnectionAttempts > 0 && this.reconnectionAttempts >= this.maxReconnectionAttempts) {
       console.error('Max reconnection attempts reached');
       return;
     }
@@ -315,7 +343,7 @@ export class QsysLibService implements OnDestroy {
     timer(delay)
       .pipe(takeUntil(this.destroy$))
       .subscribe(() => {
-        if (!this.connectionStatus$.value.connected) {
+        if (this.reconnecting && !this.connectionStatus$.value.connected) {
           this.setupSocketConnection();
         }
       });
