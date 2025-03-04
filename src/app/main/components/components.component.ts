@@ -12,6 +12,7 @@ import { MatButtonModule } from '@angular/material/button';
 export enum NodeType {
   Component,
   PropertiesGroup,
+  ControlsGroup,
   Control,
   Property
 }
@@ -103,6 +104,11 @@ export class DynamicDataSource implements DataSource<DynamicFlatNode> {
           this.loadComponentProperties(node, index);
           break;
 
+        case NodeType.ControlsGroup:
+          // Load individual controls
+          this.loadControlsGroup(node, index);
+          break;
+
         default:
           node.isLoading.set(false);
       }
@@ -138,20 +144,18 @@ export class DynamicDataSource implements DataSource<DynamicFlatNode> {
         nodes.push(propertiesNode);
       }
 
-      // Add control nodes
+      // Add Controls group node if component has controls
       if (controls && controls.length > 0) {
-        controls.forEach(control => {
-          const childNode = new DynamicFlatNode(
-            `${control.Name}: ${control.Value}`,
-            node.level + 1,
-            false,
-            signal(false),
-            node.component, // Pass the parent component reference to each control node
-            NodeType.Control,
-            control
-          );
-          nodes.push(childNode);
-        });
+        const controlsNode = new DynamicFlatNode(
+          `Controls (${controls.length})`,
+          node.level + 1,
+          true, // Expandable
+          signal(false),
+          node.component,
+          NodeType.ControlsGroup, // Add this type to your NodeType enum
+          controls // Store all controls in the data field for reference
+        );
+        nodes.push(controlsNode);
       }
 
       // Insert the new nodes after the parent
@@ -194,6 +198,35 @@ export class DynamicDataSource implements DataSource<DynamicFlatNode> {
       console.error('Error loading properties:', error);
       node.isLoading.set(false);
     }
+  }
+
+  // Add a new method to load controls from the Controls group
+  private loadControlsGroup(node: DynamicFlatNode, index: number) {
+    if (node.nodeType !== NodeType.ControlsGroup || !Array.isArray(node.data)) {
+      node.isLoading.set(false);
+      return;
+    }
+
+    const controls = node.data;
+    const nodes: DynamicFlatNode[] = [];
+
+    controls.forEach(control => {
+      const childNode = new DynamicFlatNode(
+        `${control.Name}: ${control.Value}`,
+        node.level + 1,
+        false,
+        signal(false),
+        node.component,
+        NodeType.Control,
+        control
+      );
+      nodes.push(childNode);
+    });
+
+    // Insert the new nodes after the parent
+    this.data.splice(index + 1, 0, ...nodes);
+    this._dataChange.next(this.data);
+    node.isLoading.set(false);
   }
 
   initializeWithComponents(components: QsysComponent[]) {
@@ -272,6 +305,8 @@ export class ComponentsComponent implements OnInit, OnDestroy {
         return 'node-component';
       case NodeType.PropertiesGroup:
         return 'node-properties-group';
+      case NodeType.ControlsGroup:
+        return 'node-controls-group';
       case NodeType.Control:
         return 'node-control';
       case NodeType.Property:
