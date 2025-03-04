@@ -17,17 +17,12 @@
     "experimentalDecorators": true,
     "moduleResolution": "bundler",
     "paths": {
-      "qsys-lib": [
-        "./dist/qsys-lib"
-      ]
+      "qsys-lib": ["./dist/qsys-lib", "./projects/qsys-lib/src/public-api.ts"]
     },
     "importHelpers": true,
     "target": "ES2022",
     "module": "ES2022",
-    "lib": [
-      "ES2022",
-      "dom"
-    ]
+    "lib": ["ES2022", "dom"]
   },
   "angularCompilerOptions": {
     "enableI18nLegacyMessageIdFormat": false,

@@ -1,0 +1,63 @@
+<div class="content">
+  <mat-card>
+    <mat-card-header>
+      <mat-card-title>Engine Status</mat-card-title>
+    </mat-card-header>
+    <mat-card-content>
+      <div class="engine-status" *ngIf="engineStatus">
+        <table>
+          <tr>
+            <td>Connection:</td>
+            <td>{{ api.coreAddress }}</td>
+          </tr>
+          <tr>
+            <td>State:</td>
+            <td>{{ engineStatus.State }}</td>
+          </tr>
+          <tr>
+            <td>Design Name:</td>
+            <td>{{ engineStatus.DesignName }}</td>
+          </tr>
+          <tr>
+            <td>Design Code:</td>
+            <td>{{ engineStatus.DesignCode }}</td>
+          </tr>
+          <tr>
+            <td>Is Redundant:</td>
+            <td>{{ engineStatus.IsRedundant }}</td>
+          </tr>
+          <tr>
+            <td>Is Emulator:</td>
+            <td>{{ engineStatus.IsEmulator }}</td>
+          </tr>
+          <tr>
+            <td>Platform:</td>
+            <td>{{ engineStatus.Platform }}</td>
+          </tr>
+          <tr>
+            <td>Status:</td>
+            <td>
+              <span style="margin-right: 10px">{{
+                engineStatus.Status.Code
+              }}</span>
+              {{ engineStatus.Status.String }}
+            </td>
+          </tr>
+        </table>
+      </div>
+      <div class="space gap">
+        <button mat-flat-button (click)="reconnect()">Reconnect</button>
+        <button mat-flat-button (click)="disconnect()" color="error">
+          Disconnect
+        </button>
+        <button
+          mat-button
+          (click)="sendTestCommand()"
+          [disabled]="!connectionStatus.connected"
+        >
+          Send Test Command
+        </button>
+      </div>
+    </mat-card-content>
+  </mat-card>
+</div>

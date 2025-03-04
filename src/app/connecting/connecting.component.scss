@@ -1,0 +1,10 @@
+:host {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  height: 100%;
+}
+
+fa-icon.spinner {
+  color: var(--mat-sys-primary);
+}

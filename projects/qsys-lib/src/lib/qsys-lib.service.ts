@@ -73,23 +73,69 @@ export class QsysLibService implements OnDestroy {
   private socket$?: WebSocketSubject<any>;
   private responses$ = new Subject<QsysResponse>();
 
+  // Add private field for connection state
+  private _isConnected = false;
+
   private requestId = 0;
   private reconnectionAttempts = 0;
-  private maxReconnectionAttempts = 10;
+  private maxReconnectionAttempts = 0;
   private reconnectionDelay = 3000; // 3 seconds
   private heartbeatInterval = 30000; // 30 seconds
-  private coreAddress = '';
+  private _coreAddress: string | undefined
 
   constructor() { }
 
   /**
    * Connect to a QSys Core
-   * @param ipAddress The IP address of the QSys Core
+   * @param ipAddressOrHostname The IP address or hostname of the QSys Core
    */
-  public connect(ipAddress: string): void {
-    this.coreAddress = ipAddress;
+  public connect(ipAddressOrHostname?: string): void {
+    if (ipAddressOrHostname) {
+      this.coreAddress = ipAddressOrHostname;
+    }
+    if (!this.coreAddress) {
+      console.error('Cannot connect: no IP address provided');
+      return;
+    }
     this.reconnectionAttempts = 0;
-    this.setupSocketConnection();
+    if (this.isConnected) {
+      console.log(`Waiting 1 second before connecting to QSys Core at ${this.coreAddress}...`);
+      this.setupSocketConnection();
+      return
+    }
+    timer(1000)
+      .pipe(takeUntil(this.destroy$))
+      .subscribe(() => {
+        console.log(`Now connecting to QSys Core at ${this.coreAddress}`);
+        this.setupSocketConnection();
+      });
+  }
+
+  public disconnect(clearAddress: boolean = false): void {
+    if (clearAddress) {
+      this.coreAddress = undefined;
+    }
+    this.destroy$.next();
+    this.socket$?.complete();
+    this._isConnected = false;
+    this.connectionStatus$.next({ connected: false });
+  }
+
+  public set coreAddress(address: string | undefined) {
+    this._coreAddress = address;
+    if (!address) {
+      localStorage.removeItem('coreAddress');
+    }
+    else {
+      localStorage.setItem('coreAddress', address);
+    }
+  }
+
+  public get coreAddress(): string | undefined {
+    if (!this._coreAddress) {
+      this._coreAddress = localStorage.getItem('coreAddress') ?? undefined;
+    }
+    return this._coreAddress;
   }
 
   /**
@@ -183,7 +229,7 @@ export class QsysLibService implements OnDestroy {
       this.socket$.complete();
     }
 
-    const url = `wss://${this.coreAddress}/qrc`;
+    const url = `wss://${this._coreAddress}/qrc`;
 
     this.socket$ = webSocket({
       url,
@@ -191,8 +237,8 @@ export class QsysLibService implements OnDestroy {
       serializer: (value) => JSON.stringify(value),
       openObserver: {
         next: () => {
-          console.log('QSys Core connection established');
-          this.connectionStatus$.next({ connected: true });
+          console.log('QSys Core socket connection established');
+          // Don't mark as connected yet - wait for EngineStatus notification
           this.reconnectionAttempts = 0;
           this.startHeartbeat();
         }
@@ -200,6 +246,7 @@ export class QsysLibService implements OnDestroy {
       closeObserver: {
         next: () => {
           console.log('QSys Core connection closed');
+          this._isConnected = false;
           this.connectionStatus$.next({ connected: false });
           this.attemptReconnection();
         }
@@ -210,6 +257,7 @@ export class QsysLibService implements OnDestroy {
       tap(message => this.handleMessage(message)),
       catchError(error => {
         console.error('Socket error:', error);
+        this._isConnected = false;
         this.connectionStatus$.next({ connected: false });
         this.attemptReconnection();
         throw error;
@@ -229,10 +277,14 @@ export class QsysLibService implements OnDestroy {
     if (message.method === 'EngineStatus') {
       const engineStatus = message.params as QsysEngineStatus;
       this.engineStatus$.next(engineStatus);
+
+      // Now we can mark the connection as fully established
+      this._isConnected = true;
       this.connectionStatus$.next({
         connected: true,
         engineStatus
       });
+
       console.log('Engine status updated:', engineStatus);
     }
     // Handle other notification types as needed
@@ -250,7 +302,7 @@ export class QsysLibService implements OnDestroy {
   }
 
   private attemptReconnection(): void {
-    if (this.reconnectionAttempts >= this.maxReconnectionAttempts) {
+    if (this.reconnectionAttempts >= this.maxReconnectionAttempts && this.maxReconnectionAttempts > 0) {
       console.error('Max reconnection attempts reached');
       return;
     }
@@ -294,6 +346,13 @@ export class QsysLibService implements OnDestroy {
   public async getControls(componentName: string): Promise<QsysControl[]> {
     const response = await this.sendCommandAsync('Component.GetControls', { Name: componentName });
     return response.Controls;
+  }
+
+  /**
+   * Get the current connection state
+   */
+  public get isConnected(): boolean {
+    return this._isConnected;
   }
 
   ngOnDestroy(): void {

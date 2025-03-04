@@ -1,23 +1,26 @@
 @use '@angular/material' as mat;
 
+:host {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+}
+
 // Customize the entire app. Change :root to your selector if you want to scope the styles.
 .main-toolbar {
     @include mat.toolbar-overrides((container-background-color: var(--mat-sys-secondary-container),
-            container-text-color: var(--mat-sys-on-primary),
+            container-text-color: var(--mat-sys-on-secondary-container),
         ));
-    @include mat.elevation(1);
+
+    @media (prefers-color-scheme: light) {
+        @include mat.elevation(1);
+    }
+}
+
+.spacer {
+    flex: 1;
 }
 
 .content {
-    padding: 1rem;
-}
-
-.connection {
-    &.connected {
-        color: var(--mat-sys-primary);
-    }
-
-    &.disconnected {
-        color: var(--mat-sys-error);
-    }
+    flex: 1;
 }

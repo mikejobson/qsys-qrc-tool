@@ -1,72 +1,10 @@
+@if(showHeader) {
 <mat-toolbar class="main-toolbar">
-  <h1>QSys Web Test</h1>
+  <h1>QSys Demo App</h1>
+  <span class="spacer"></span>
+  <img src="/qsys-logo.svg" class="logo" />
 </mat-toolbar>
-
-<div class="content">
-  <mat-card>
-    <mat-card-header>
-      <mat-card-title>Connection Status</mat-card-title>
-    </mat-card-header>
-    <mat-card-content>
-      @if(connectionStatus.connected) {
-      <div class="connection space align-center connected">
-        <mat-icon class="status-icon" color="primary">check_circle</mat-icon>
-        <span class="status-text">Connected</span>
-      </div>
-      } @else {
-      <div class="connection space align-center disconnected">
-        <mat-icon class="status-icon" color="warn">error</mat-icon>
-        <span class="status-text">Disconnected</span>
-      </div>
-      }
-      <div class="space">
-        <button mat-button (click)="connectToQsysCore()">Reconnect</button>
-        <button
-          mat-button
-          (click)="sendTestCommand()"
-          [disabled]="!connectionStatus.connected"
-        >
-          Send Test Command
-        </button>
-      </div>
-      <div class="engine-status" *ngIf="engineStatus">
-        <h2>Engine Status</h2>
-        <table>
-          <tr>
-            <td>State:</td>
-            <td>{{ engineStatus.State }}</td>
-          </tr>
-          <tr>
-            <td>Design Name:</td>
-            <td>{{ engineStatus.DesignName }}</td>
-          </tr>
-          <tr>
-            <td>Design Code:</td>
-            <td>{{ engineStatus.DesignCode }}</td>
-          </tr>
-          <tr>
-            <td>Is Redundant:</td>
-            <td>{{ engineStatus.IsRedundant }}</td>
-          </tr>
-          <tr>
-            <td>Is Emulator:</td>
-            <td>{{ engineStatus.IsEmulator }}</td>
-          </tr>
-          <tr>
-            <td>Platform:</td>
-            <td>{{ engineStatus.Platform }}</td>
-          </tr>
-          <tr>
-            <td>Status:</td>
-            <td>
-              <span style="margin-right: 10px">{{
-                engineStatus.Status.Code
-              }}</span>
-              {{ engineStatus.Status.String }}
-            </td>
-          </tr>
-        </table>
-      </div>
-    </mat-card-content>
-  </mat-card>
+}
+<div class="space column content">
+  <router-outlet></router-outlet>
 </div>
