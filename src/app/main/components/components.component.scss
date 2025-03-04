@@ -30,17 +30,19 @@
 }
 
 .node-component {
+  display: flex;
+  flex-direction: column;
   font-weight: bold;
-  color: #2c3e50;
+
+  .type {
+    color: #e67e22;
+    font-size: small;
+  }
 }
 
 .node-properties-group {
   font-weight: bold;
   color: #16a085;
-}
-
-.node-control {
-  color: #3498db;
 }
 
 .node-property {

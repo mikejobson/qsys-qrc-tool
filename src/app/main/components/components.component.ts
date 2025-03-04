@@ -200,6 +200,8 @@ export class DynamicDataSource implements DataSource<DynamicFlatNode> {
     }
   }
 
+  private collator = new Intl.Collator(undefined, { numeric: true, sensitivity: 'base' });
+
   // Add a new method to load controls from the Controls group
   private loadControlsGroup(node: DynamicFlatNode, index: number) {
     if (node.nodeType !== NodeType.ControlsGroup || !Array.isArray(node.data)) {
@@ -207,7 +209,7 @@ export class DynamicDataSource implements DataSource<DynamicFlatNode> {
       return;
     }
 
-    const controls = node.data;
+    const controls = node.data.sort((a, b) => this.collator.compare(a.Name, b.Name));
     const nodes: DynamicFlatNode[] = [];
 
     controls.forEach(control => {
@@ -246,7 +248,9 @@ export class DynamicDataSource implements DataSource<DynamicFlatNode> {
     });
 
     // Sort alphabetically
-    data.sort((a, b) => a.item.localeCompare(b.item));
+    data.sort((a, b) => {
+      return this.collator.compare(a.item, b.item);
+    });
 
     this.data = data;
   }

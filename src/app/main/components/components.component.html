@@ -8,9 +8,8 @@
     <mat-tree-node
       *matTreeNodeDef="let node"
       matTreeNodePadding
-      matTreeNodePaddingIndent="20px"
+      matTreeNodePaddingIndent="30px"
     >
-      <button mat-icon-button disabled></button>
       @if(node.nodeType == NodeType.Control) {
       <button
         mat-button
@@ -28,7 +27,7 @@
     <mat-tree-node
       *matTreeNodeDef="let node; when: hasChild"
       matTreeNodePadding
-      matTreeNodePaddingIndent="20px"
+      matTreeNodePaddingIndent="30px"
     >
       <button
         mat-icon-button
@@ -45,7 +44,12 @@
           *ngIf="!node.isLoading()"
         ></fa-icon>
       </button>
-      <span [ngClass]="getNodeClass(node)">{{ node.item }}</span>
+      <span [ngClass]="getNodeClass(node)"
+        >{{ node.item }}
+        @if(node.nodeType == NodeType.Component) {
+        <span class="type">{{ node.component.Type }}</span>
+        }
+      </span>
     </mat-tree-node>
   </mat-tree>
 </div>
