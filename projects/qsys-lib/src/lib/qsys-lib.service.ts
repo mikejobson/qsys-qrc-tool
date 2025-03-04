@@ -174,7 +174,7 @@ export class QsysLibService implements OnDestroy {
         timeout(timeoutMs),
         map(response => {
           if (response.error) {
-            throw new Error(`QSys error: ${response.error.message} (code ${response.error.code})`);
+            throw new Error(`QSys error: ${response.error.message} (code ${response.error.code})`, { cause: response.error });
           }
           return response.result;
         })
