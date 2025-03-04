@@ -1,7 +1,7 @@
 import { Injectable, OnDestroy } from '@angular/core';
-import { BehaviorSubject, Observable, Subject, timer } from 'rxjs';
+import { BehaviorSubject, Observable, Subject, timer, firstValueFrom } from 'rxjs';
 import { webSocket, WebSocketSubject } from 'rxjs/webSocket';
-import { catchError, switchMap, takeUntil, tap, filter, retry } from 'rxjs/operators';
+import { catchError, switchMap, takeUntil, tap, filter, retry, take, timeout, map } from 'rxjs/operators';
 
 export interface QsysEngineStatus {
   State: string;
@@ -16,6 +16,16 @@ export interface QsysConnectionStatus {
   engineStatus?: QsysEngineStatus;
 }
 
+export interface QsysResponse {
+  jsonrpc: string;
+  id: number | string;
+  result?: any;
+  error?: {
+    code: number;
+    message: string;
+  };
+}
+
 @Injectable({
   providedIn: 'root'
 })
@@ -25,7 +35,9 @@ export class QsysLibService implements OnDestroy {
   private engineStatus$ = new BehaviorSubject<QsysEngineStatus | null>(null);
   private destroy$ = new Subject<void>();
   private socket$?: WebSocketSubject<any>;
+  private responses$ = new Subject<QsysResponse>();
 
+  private requestId = 0;
   private reconnectionAttempts = 0;
   private maxReconnectionAttempts = 10;
   private reconnectionDelay = 3000; // 3 seconds
@@ -59,12 +71,62 @@ export class QsysLibService implements OnDestroy {
   }
 
   /**
-   * Send a command to the QSys Core
+   * Send a command to the QSys Core and get response asynchronously
+   * @param method The QRC method name
+   * @param params The parameters for the command
+   * @param timeoutMs Optional timeout in milliseconds (defaults to 5000ms)
+   * @returns Promise with the response
+   */
+  public async sendCommandAsync(method: string, params: any = {}, timeoutMs = 5000): Promise<any> {
+    if (!this.socket$ || !this.connectionStatus$.value.connected) {
+      throw new Error('Cannot send command: not connected to QSys Core');
+    }
+
+    const id = this.getNextRequestId();
+
+    // Create an observable that will emit the response with matching ID
+    const responsePromise = firstValueFrom(
+      this.responses$.pipe(
+        filter(response => response.id === id),
+        take(1),
+        timeout(timeoutMs),
+        map(response => {
+          if (response.error) {
+            throw new Error(`QSys error: ${response.error.message} (code ${response.error.code})`);
+          }
+          return response.result;
+        })
+      )
+    );
+
+    // Send the command
+    this.sendCommand(method, params, id);
+
+    // Wait for the response
+    return responsePromise;
+  }
+
+  /**
+   * Send a notification (command without response) to the QSys Core
+   * @param method The QRC method name
+   * @param params The parameters for the notification
+   */
+  public sendNotification(method: string, params: any = {}): void {
+    this.sendCommand(method, params);
+  }
+
+  private getNextRequestId(): number {
+    this.requestId = (this.requestId + 1) % 10000;
+    return this.requestId;
+  }
+
+  /**
+   * Private method to send a command to the QSys Core
    * @param method The QRC method name
    * @param params The parameters for the command
    * @param id Optional ID for the request
    */
-  public sendCommand(method: string, params: any = {}, id?: number | string): void {
+  private sendCommand(method: string, params: any = {}, id?: number | string): void {
     if (!this.socket$ || !this.connectionStatus$.value.connected) {
       console.error('Cannot send command: not connected to QSys Core');
       return;
@@ -121,6 +183,12 @@ export class QsysLibService implements OnDestroy {
   }
 
   private handleMessage(message: any): void {
+    // Handle responses (messages with IDs)
+    if (message.id !== undefined) {
+      this.responses$.next(message as QsysResponse);
+      return;
+    }
+
     // Handle EngineStatus notifications
     if (message.method === 'EngineStatus') {
       const engineStatus = message.params as QsysEngineStatus;
@@ -131,7 +199,7 @@ export class QsysLibService implements OnDestroy {
       });
       console.log('Engine status updated:', engineStatus);
     }
-    // Handle other message types as needed
+    // Handle other notification types as needed
   }
 
   private startHeartbeat(): void {
@@ -141,7 +209,7 @@ export class QsysLibService implements OnDestroy {
         filter(() => this.connectionStatus$.value.connected)
       )
       .subscribe(() => {
-        this.sendCommand('NoOp', {});
+        this.sendNotification('NoOp', {});
       });
   }
 
