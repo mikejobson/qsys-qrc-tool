@@ -1,57 +1,63 @@
 <div class="tree">
-  <mat-tree
-    [dataSource]="dataSource"
-    [treeControl]="treeControl"
-    class="component-tree"
-  >
-    <!-- Leaf node -->
-    <mat-tree-node
-      *matTreeNodeDef="let node"
-      matTreeNodePadding
-      matTreeNodePaddingIndent="30px"
+  <div class="tree-container">
+    <mat-tree
+      [dataSource]="dataSource"
+      [treeControl]="treeControl"
+      class="component-tree"
     >
-      @if(node.nodeType == NodeType.Control) {
-      <button
-        mat-button
-        [ngClass]="getNodeClass(node)"
-        (click)="selectControl(node)"
+      <!-- Leaf node -->
+      <mat-tree-node
+        *matTreeNodeDef="let node"
+        matTreeNodePadding
+        matTreeNodePaddingIndent="30px"
       >
-        {{ node.item }}
-      </button>
-      } @else {
-      <span [ngClass]="getNodeClass(node)">{{ node.item }}</span>
-      }
-    </mat-tree-node>
-
-    <!-- Expandable node -->
-    <mat-tree-node
-      *matTreeNodeDef="let node; when: hasChild"
-      matTreeNodePadding
-      matTreeNodePaddingIndent="30px"
-    >
-      <button
-        mat-icon-button
-        matTreeNodeToggle
-        [attr.aria-label]="'Toggle ' + node.item"
-      >
-        <fa-icon
-          [icon]="faSpinner"
-          animation="spin"
-          *ngIf="node.isLoading()"
-        ></fa-icon>
-        <fa-icon
-          [icon]="treeControl.isExpanded(node) ? faCaretDown : faCaretRight"
-          *ngIf="!node.isLoading()"
-        ></fa-icon>
-      </button>
-      <span [ngClass]="getNodeClass(node)"
-        >{{ node.item }}
-        @if(node.nodeType == NodeType.Component) {
-        <span class="type">{{ node.component.Type }}</span>
+        @if(node.nodeType == NodeType.Control) {
+        <button
+          mat-button
+          [ngClass]="getNodeClass(node)"
+          (click)="selectControl(node)"
+        >
+          {{ node.item }}
+        </button>
+        } @else {
+        <span [ngClass]="getNodeClass(node)">{{ node.item }}</span>
         }
-      </span>
-    </mat-tree-node>
-  </mat-tree>
+      </mat-tree-node>
+
+      <!-- Expandable node -->
+      <mat-tree-node
+        *matTreeNodeDef="let node; when: hasChild"
+        matTreeNodePadding
+        matTreeNodePaddingIndent="30px"
+      >
+        <button
+          class="small"
+          mat-icon-button
+          matTreeNodeToggle
+          class="expand-button"
+          [attr.aria-label]="'Toggle ' + node.item"
+        >
+          <fa-icon
+            [icon]="faSpinner"
+            animation="spin"
+            *ngIf="node.isLoading()"
+          ></fa-icon>
+          <fa-icon
+            [icon]="
+              treeControl.isExpanded(node) ? faChevronDown : faChevronRight
+            "
+            *ngIf="!node.isLoading()"
+          ></fa-icon>
+        </button>
+        <span [ngClass]="getNodeClass(node)" (click)="treeControl.expand(node)">
+          {{ node.item }}
+          @if(node.nodeType == NodeType.Component) {
+          <span class="type">{{ node.component.Type }}</span>
+          }
+        </span>
+      </mat-tree-node>
+    </mat-tree>
+  </div>
 </div>
 <div class="content">
   @if(selectedControl) {

@@ -6,7 +6,7 @@ import { MatTreeModule } from '@angular/material/tree';
 import { CollectionViewer, DataSource, SelectionChange } from '@angular/cdk/collections';
 import { FlatTreeControl } from '@angular/cdk/tree';
 import { FontAwesomeModule } from '@fortawesome/angular-fontawesome';
-import { faSpinner, faCaretRight, faCaretDown } from '@fortawesome/free-solid-svg-icons';
+import { faSpinner, faChevronRight, faChevronDown } from '@fortawesome/free-solid-svg-icons';
 import { MatButtonModule } from '@angular/material/button';
 
 export enum NodeType {
@@ -275,8 +275,8 @@ export class ComponentsComponent implements OnInit, OnDestroy {
   private cd = inject(ChangeDetectorRef);
   components: QsysComponent[] = [];
   faSpinner = faSpinner;
-  faCaretRight = faCaretRight;
-  faCaretDown = faCaretDown;
+  faChevronRight = faChevronRight;
+  faChevronDown = faChevronDown;
   NodeType = NodeType; // Make enum available in template
   loading = false;
 
