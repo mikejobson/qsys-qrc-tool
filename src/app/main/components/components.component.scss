@@ -6,8 +6,10 @@
 }
 
 .tree {
-  // border-right: 1px solid var(--mat-sys-outline);
   min-width: 300px;
+  overflow: hidden;
+  position: relative;
+  height: 100%;
   background: var(--mat-sys-surface-container-low);
 }
 
@@ -15,14 +17,16 @@
   flex: 1;
 }
 
-mat-tree {
-  background-color: unset;
-}
-
 .component-tree {
+  background-color: unset;
   border-radius: 4px;
-  padding: 8px;
-  margin-top: 16px;
+  position: absolute;
+  height: 100%;
+  overflow-y: auto;
+
+  &::-webkit-scrollbar {
+    display: none;
+  }
 }
 
 .node-component {
