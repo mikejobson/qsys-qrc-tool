@@ -1,5 +1,5 @@
 import { ChangeDetectionStrategy, Component, inject, OnDestroy, OnInit } from '@angular/core';
-import { Router } from '@angular/router';
+import { ActivatedRoute, ActivatedRouteSnapshot, Router } from '@angular/router';
 import { QsysLibService } from 'qsys-lib';
 import { FontAwesomeModule } from '@fortawesome/angular-fontawesome';
 import { faSpinner } from '@fortawesome/free-solid-svg-icons';
@@ -17,6 +17,7 @@ import { Subject, takeUntil } from 'rxjs';
 export class ConnectingComponent implements OnInit, OnDestroy {
   readonly api: QsysLibService = inject(QsysLibService);
   private router = inject(Router);
+  private route = inject(ActivatedRoute);
   private destroy$ = new Subject<void>();
   readonly faSpinner = faSpinner;
 
@@ -25,11 +26,14 @@ export class ConnectingComponent implements OnInit, OnDestroy {
       this.router.navigate(['/connect']);
       return;
     }
-    this.api.getConnectionStatus().pipe(takeUntil(this.destroy$)).subscribe((status) => {
-      console.log('Connection status:', status);
-      if (status.connected) {
-        this.router.navigate(['/']);
-      }
+    this.route.queryParams.pipe(takeUntil(this.destroy$)).subscribe(params => {
+      let returnUrl = params['returnUrl'];
+      this.api.getConnectionStatus().pipe(takeUntil(this.destroy$)).subscribe((status) => {
+        console.log('Connection status:', status);
+        if (status.connected) {
+          this.router.navigate([returnUrl || '/']);
+        }
+      });
     });
   }
 
