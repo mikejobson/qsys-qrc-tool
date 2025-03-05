@@ -5,14 +5,25 @@
   flex-direction: row;
   height: 100%;
   gap: 1rem;
+  overflow: hidden;
 }
 
-.tree {
-  min-width: 320px;
-  overflow: hidden;
-  position: relative;
-  width: auto;
+.left-column {
+  min-width: 200px;
+  height: 100%;
   background: var(--mat-sys-surface-container-low);
+
+  .inner-container {
+    overflow: hidden;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+  }
+}
+
+.searchbox {
+  padding: 1rem;
+  background: var(--mat-sys-surface-container-lowest);
 }
 
 .content {
@@ -20,9 +31,11 @@
 }
 
 .tree-container {
-  position: absolute;
-  overflow: auto;
+  display: flex;
+  flex-direction: column;
   height: 100%;
+  overflow: auto;
+  position: relative;
 
   &::-webkit-scrollbar {
     display: none;
@@ -33,13 +46,15 @@
   background-color: unset;
   border-radius: 4px;
   padding: 1rem;
-  width: 100%;
+  display: flex;
+  flex-direction: column;
 }
 
 .node-component {
   display: flex;
   flex-direction: column;
   font-weight: bold;
+  cursor: pointer;
 
   .type {
     color: #e67e22;
@@ -50,6 +65,7 @@
 .node-properties-group {
   font-weight: bold;
   color: #16a085;
+  cursor: pointer;
 }
 
 .node-property {
@@ -59,6 +75,7 @@
 
 .node-controls-group {
   font-weight: bold;
+  cursor: pointer;
   color: #e74c3c;
 }
 
