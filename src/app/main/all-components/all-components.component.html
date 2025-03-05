@@ -11,137 +11,146 @@
           {{ component.type }}
         </mat-panel-description>
       </mat-expansion-panel-header>
-      <mat-divider></mat-divider>
-      @if(component.properties.length > 0) {
-      <div class="properties-container">
-        <h3>Properties</h3>
-        <table mat-table [dataSource]="component.properties">
-          <ng-container matColumnDef="PrettyName">
-            <th mat-header-cell *matHeaderCellDef>Name</th>
-            <td mat-cell *matCellDef="let element">{{ element.PrettyName }}</td>
-          </ng-container>
-          <ng-container matColumnDef="Name">
-            <th mat-header-cell *matHeaderCellDef>Id</th>
-            <td mat-cell *matCellDef="let element">{{ element.Name }}</td>
-          </ng-container>
-          <ng-container matColumnDef="Value">
-            <th mat-header-cell *matHeaderCellDef>Value</th>
-            <td mat-cell *matCellDef="let element">{{ element.Value }}</td>
-          </ng-container>
-          <tr mat-header-row *matHeaderRowDef="displayedPropertyColumns"></tr>
-          <tr
-            mat-row
-            *matRowDef="let row; columns: displayedPropertyColumns"
-          ></tr>
-        </table>
-      </div>
-      } @if(component.controls.length > 0) {
-      <div class="controls-container">
-        <h3>Controls</h3>
-        <table mat-table [dataSource]="component.controls">
-          <ng-container matColumnDef="name">
-            <th mat-header-cell *matHeaderCellDef>Name</th>
-            <td mat-cell *matCellDef="let element">{{ element.name }}</td>
-          </ng-container>
-          <ng-container matColumnDef="type">
-            <th mat-header-cell *matHeaderCellDef>Type</th>
-            <td mat-cell *matCellDef="let element">{{ element.type }}</td>
-          </ng-container>
-          <ng-container matColumnDef="value">
-            <th mat-header-cell *matHeaderCellDef>Value</th>
-            <td mat-cell *matCellDef="let element">
-              @if(element.type === 'Boolean' && element.canWrite) {
-              <mat-slide-toggle
-                [checked]="element.value"
-                (change)="onToggleChange($event, element)"
-              ></mat-slide-toggle>
-              } @else if(element.type === 'Boolean' && !element.canWrite) {
-              <div class="led" [ngClass]="{ on: element.value }"></div>
-              } @else if(element.type === 'Float' && element.canWrite) {
-              <mat-slider [min]="0" [max]="1" [step]="0.01">
+      <ng-template matExpansionPanelContent>
+        <mat-divider></mat-divider>
+        @if(component.properties.length > 0) {
+        <div class="properties-container">
+          <h3>Properties</h3>
+          <table mat-table [dataSource]="component.properties">
+            <ng-container matColumnDef="PrettyName">
+              <th mat-header-cell *matHeaderCellDef>Name</th>
+              <td mat-cell *matCellDef="let element">
+                {{ element.PrettyName }}
+              </td>
+            </ng-container>
+            <ng-container matColumnDef="Name">
+              <th mat-header-cell *matHeaderCellDef>Id</th>
+              <td mat-cell *matCellDef="let element">{{ element.Name }}</td>
+            </ng-container>
+            <ng-container matColumnDef="Value">
+              <th mat-header-cell *matHeaderCellDef>Value</th>
+              <td mat-cell *matCellDef="let element">{{ element.Value }}</td>
+            </ng-container>
+            <tr mat-header-row *matHeaderRowDef="displayedPropertyColumns"></tr>
+            <tr
+              mat-row
+              *matRowDef="let row; columns: displayedPropertyColumns"
+            ></tr>
+          </table>
+        </div>
+        } @if(component.controls.length > 0) {
+        <div class="controls-container">
+          <h3>Controls</h3>
+          <table mat-table [dataSource]="component.controls">
+            <ng-container matColumnDef="name">
+              <th mat-header-cell *matHeaderCellDef>Name</th>
+              <td mat-cell *matCellDef="let element">{{ element.name }}</td>
+            </ng-container>
+            <ng-container matColumnDef="type">
+              <th mat-header-cell *matHeaderCellDef>Type</th>
+              <td mat-cell *matCellDef="let element">{{ element.type }}</td>
+            </ng-container>
+            <ng-container matColumnDef="value">
+              <th mat-header-cell *matHeaderCellDef>Value</th>
+              <td mat-cell *matCellDef="let element">
+                @if(element.type === 'Boolean' && element.canWrite) {
+                <mat-slide-toggle
+                  [checked]="element.value"
+                  (change)="onToggleChange($event, element)"
+                ></mat-slide-toggle>
+                } @else if(element.type === 'Boolean' && !element.canWrite) {
+                <div class="led" [ngClass]="{ on: element.value }"></div>
+                } @else if(element.type === 'Float' && element.canWrite) {
+                <mat-slider [min]="0" [max]="1" [step]="0.01">
+                  <input
+                    matSliderThumb
+                    [value]="element.position"
+                    (valueChange)="onSliderChangePosition($event, element)"
+                  />
+                </mat-slider>
                 <input
-                  matSliderThumb
-                  [value]="element.position"
-                  (valueChange)="onSliderChangePosition($event, element)"
-                />
-              </mat-slider>
-              <input
-                class="value-edit ml"
-                type="number"
-                [value]="element.value"
-                (change)="onValueEditChange($event, element)"
-              />
-              } @else if(element.type === 'Integer' && element.canWrite) {
-              <mat-slider
-                [min]="element.valueMin"
-                [max]="element.valueMax"
-                [step]="1"
-                showTickMarks
-              >
-                <input
-                  matSliderThumb
+                  class="value-edit ml"
+                  type="number"
                   [value]="element.value"
-                  (valueChange)="onSliderChangeValue($event, element)"
+                  (change)="onValueEditChange($event, element)"
                 />
-              </mat-slider>
-              <input
-                class="value-edit ml"
-                type="number"
-                [value]="element.value"
-                (change)="onValueEditChange($event, element)"
-              />
-              } @else if(element.type === 'Trigger' && element.canWrite) {
-              <button
-                mat-flat-button
-                color="primary"
-                (click)="onTriggerClick(element)"
-              >
-                Trigger
-              </button>
-              } @else if(element.type === 'State Trigger' && element.canWrite) {
-              <button
-                mat-flat-button
-                color="primary"
-                (click)="onTriggerClick(element)"
-              >
-                Trigger
-              </button>
-              } @else if(element.type === 'Text' && element.canWrite) {
-              <input
-                class="value-edit"
-                type="text"
-                [value]="element.value"
-                (change)="onValueEditChange($event, element)"
-              />
-              } @else {
-              {{ element.value }}
-              }
-            </td>
-          </ng-container>
-          <ng-container matColumnDef="string">
-            <th mat-header-cell *matHeaderCellDef>String</th>
-            <td mat-cell *matCellDef="let element">{{ element.string }}</td>
-          </ng-container>
-          <ng-container matColumnDef="stringMin">
-            <th mat-header-cell *matHeaderCellDef>Min</th>
-            <td mat-cell *matCellDef="let element">{{ element.stringMin }}</td>
-          </ng-container>
-          <ng-container matColumnDef="stringMax">
-            <th mat-header-cell *matHeaderCellDef>Max</th>
-            <td mat-cell *matCellDef="let element">{{ element.stringMax }}</td>
-          </ng-container>
-          <ng-container matColumnDef="canWrite">
-            <th mat-header-cell *matHeaderCellDef>Writable</th>
-            <td mat-cell *matCellDef="let element">{{ element.canWrite }}</td>
-          </ng-container>
-          <tr mat-header-row *matHeaderRowDef="displayedControlColumns"></tr>
-          <tr
-            mat-row
-            *matRowDef="let row; columns: displayedControlColumns"
-          ></tr>
-        </table>
-      </div>
-      }
+                } @else if(element.type === 'Integer' && element.canWrite) {
+                <mat-slider
+                  [min]="element.valueMin"
+                  [max]="element.valueMax"
+                  [step]="1"
+                  showTickMarks
+                >
+                  <input
+                    matSliderThumb
+                    [value]="element.value"
+                    (valueChange)="onSliderChangeValue($event, element)"
+                  />
+                </mat-slider>
+                <input
+                  class="value-edit ml"
+                  type="number"
+                  [value]="element.value"
+                  (change)="onValueEditChange($event, element)"
+                />
+                } @else if(element.type === 'Trigger' && element.canWrite) {
+                <button
+                  mat-flat-button
+                  color="primary"
+                  (click)="onTriggerClick(element)"
+                >
+                  Trigger
+                </button>
+                } @else if(element.type === 'State Trigger' && element.canWrite)
+                {
+                <button
+                  mat-flat-button
+                  color="primary"
+                  (click)="onTriggerClick(element)"
+                >
+                  Trigger
+                </button>
+                } @else if(element.type === 'Text' && element.canWrite) {
+                <input
+                  class="value-edit"
+                  type="text"
+                  [value]="element.value"
+                  (change)="onValueEditChange($event, element)"
+                />
+                } @else {
+                {{ element.value }}
+                }
+              </td>
+            </ng-container>
+            <ng-container matColumnDef="string">
+              <th mat-header-cell *matHeaderCellDef>String</th>
+              <td mat-cell *matCellDef="let element">{{ element.string }}</td>
+            </ng-container>
+            <ng-container matColumnDef="stringMin">
+              <th mat-header-cell *matHeaderCellDef>Min</th>
+              <td mat-cell *matCellDef="let element">
+                {{ element.stringMin }}
+              </td>
+            </ng-container>
+            <ng-container matColumnDef="stringMax">
+              <th mat-header-cell *matHeaderCellDef>Max</th>
+              <td mat-cell *matCellDef="let element">
+                {{ element.stringMax }}
+              </td>
+            </ng-container>
+            <ng-container matColumnDef="canWrite">
+              <th mat-header-cell *matHeaderCellDef>Writable</th>
+              <td mat-cell *matCellDef="let element">{{ element.canWrite }}</td>
+            </ng-container>
+            <tr mat-header-row *matHeaderRowDef="displayedControlColumns"></tr>
+            <tr
+              mat-row
+              *matRowDef="let row; columns: displayedControlColumns"
+            ></tr>
+          </table>
+        </div>
+        }
+      </ng-template>
     </mat-expansion-panel>
     }
   </mat-accordion>
