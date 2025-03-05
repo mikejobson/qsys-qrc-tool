@@ -55,6 +55,8 @@
                 [checked]="element.value"
                 (change)="onToggleChange($event, element)"
               ></mat-slide-toggle>
+              } @else if(element.type === 'Boolean' && !element.canWrite) {
+              <div class="led" [ngClass]="{ on: element.value }"></div>
               } @else if(element.type === 'Float' && element.canWrite) {
               <mat-slider [min]="0" [max]="1" [step]="0.01">
                 <input
@@ -89,6 +91,14 @@
                 (change)="onValueEditChange($event, element)"
               />
               } @else if(element.type === 'Trigger' && element.canWrite) {
+              <button
+                mat-flat-button
+                color="primary"
+                (click)="onTriggerClick(element)"
+              >
+                Trigger
+              </button>
+              } @else if(element.type === 'State Trigger' && element.canWrite) {
               <button
                 mat-flat-button
                 color="primary"

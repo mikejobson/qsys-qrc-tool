@@ -37,3 +37,15 @@ mat-slider {
     margin-left: 10px;
   }
 }
+
+.led {
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  display: inline-block;
+  background-color: red;
+
+  &.on {
+    background-color: light-dark(green, lawngreen);
+  }
+}
