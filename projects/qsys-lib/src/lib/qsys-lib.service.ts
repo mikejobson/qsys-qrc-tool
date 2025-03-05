@@ -324,10 +324,9 @@ export class QsysLibService implements OnDestroy {
   private maxReconnectionAttempts = 0;
   private reconnectionDelay = 3000; // 3 seconds
   private heartbeatInterval = 30000; // 30 seconds
-  private _coreAddress: string | undefined
   private _components: { [name: string]: QsysComponent } = {};
   private designCode: string | undefined;
-  pollInternalTimeout: any;
+  private pollInternalTimeout: any;
 
   constructor() { }
 
@@ -335,10 +334,9 @@ export class QsysLibService implements OnDestroy {
    * Connect to a QSys Core
    * @param ipAddressOrHostname The IP address or hostname of the QSys Core
    */
-  public connect(ipAddressOrHostname?: string): void {
-    if (ipAddressOrHostname) {
-      this.coreAddress = ipAddressOrHostname;
-    }
+  public connect(ipAddressOrHostname: string): void {
+    this.coreAddress = ipAddressOrHostname;
+    console.log('Connecting to QSys Core at', this.coreAddress);
     if (!this.coreAddress) {
       console.error('Cannot connect: no IP address provided');
       return;
@@ -361,9 +359,10 @@ export class QsysLibService implements OnDestroy {
       });
   }
 
-  public disconnect(clearAddress: boolean = false): void {
+  public disconnect(): void {
     // Prevent any further reconnection attempts
     this.reconnecting = false;
+    this.coreAddress = undefined;
 
     // Cancel any pending reconnections
     this.reconnectionAttempts = Number.MAX_SAFE_INTEGER;
@@ -378,31 +377,11 @@ export class QsysLibService implements OnDestroy {
     this._isConnected = false;
     this.connectionStatus$.next({ connected: false });
 
-    // Clear address if requested
-    if (clearAddress) {
-      this.coreAddress = undefined;
-    }
-
     // Don't emit on destroy$ yet (this would terminate everything including this method)
     // Instead, only emit if we're truly destroying the service
   }
 
-  public set coreAddress(address: string | undefined) {
-    this._coreAddress = address;
-    if (!address) {
-      localStorage.removeItem('coreAddress');
-    }
-    else {
-      localStorage.setItem('coreAddress', address);
-    }
-  }
-
-  public get coreAddress(): string | undefined {
-    if (!this._coreAddress) {
-      this._coreAddress = localStorage.getItem('coreAddress') ?? undefined;
-    }
-    return this._coreAddress;
-  }
+  public coreAddress: string | undefined;
 
   /**
    * Get observable of connection status
@@ -499,7 +478,7 @@ export class QsysLibService implements OnDestroy {
       this.socket$.complete();
     }
 
-    const url = `wss://${this._coreAddress}/qrc`;
+    const url = `wss://${this.coreAddress}/qrc`;
 
     this.socket$ = webSocket({
       url,

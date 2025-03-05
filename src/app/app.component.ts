@@ -4,7 +4,7 @@ import { MatToolbarModule } from '@angular/material/toolbar';
 import { MatButtonModule } from '@angular/material/button';
 import { RouterModule } from '@angular/router';
 import { QsysLibService } from 'qsys-lib';
-import { pipe, Subject, takeUntil } from 'rxjs';
+import { Subject, takeUntil } from 'rxjs';
 
 @Component({
   selector: 'app-root',
@@ -23,8 +23,9 @@ export class AppComponent implements OnInit, OnDestroy {
     this.api.getConnectionStatus().pipe(takeUntil(this.destroy$)).subscribe((status) => {
       this.showHeader = status.connected;
     });
-    if (this.api.coreAddress && this.api.coreAddress.length > 0) {
-      this.api.connect();
+    let address = localStorage.getItem('coreAddress');
+    if (address) {
+      this.api.connect(address);
     }
   }
 

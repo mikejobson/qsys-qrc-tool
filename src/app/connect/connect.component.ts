@@ -1,5 +1,5 @@
 import { CommonModule } from '@angular/common';
-import { ChangeDetectionStrategy, Component, inject } from '@angular/core';
+import { ChangeDetectionStrategy, Component, inject, OnInit } from '@angular/core';
 import { MatCardModule } from '@angular/material/card';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
@@ -24,12 +24,18 @@ import { Router } from '@angular/router';
   styleUrl: './connect.component.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
-export class ConnectComponent {
+export class ConnectComponent implements OnInit {
   readonly api: QsysLibService = inject(QsysLibService);
   readonly ipAddress = new FormControl('', { validators: [Validators.required] });
   readonly router = inject(Router);
 
+  ngOnInit(): void {
+    this.ipAddress.setValue(this.api.coreAddress!);
+  }
+
   connect() {
+    localStorage.setItem('coreAddress', this.ipAddress.value!);
+    console.log('Connecting to', this.ipAddress.value);
     this.api.connect(this.ipAddress.value!);
     this.router.navigate(['/connecting']);
   }
