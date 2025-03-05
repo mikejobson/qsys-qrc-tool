@@ -314,6 +314,7 @@ export class QsysLibService implements OnDestroy {
   private heartbeatInterval = 30000; // 30 seconds
   private _coreAddress: string | undefined
   private _components: { [name: string]: QsysComponent } = {};
+  private designCode: string | undefined;
 
   constructor() { }
 
@@ -416,7 +417,7 @@ export class QsysLibService implements OnDestroy {
    * @returns Promise with the response
    */
   public async sendCommandAsync(method: string, params: any = {}, timeoutMs = 5000): Promise<any> {
-    if (!this.socket$ || !this.connectionStatus$.value.connected) {
+    if (!this.socket$) {
       throw new Error('Cannot send command: not connected to QSys Core');
     }
 
@@ -465,7 +466,7 @@ export class QsysLibService implements OnDestroy {
    * @param id Optional ID for the request
    */
   private sendCommand(method: string, params: any = {}, id?: number | string): void {
-    if (!this.socket$ || !this.connectionStatus$.value.connected) {
+    if (!this.socket$) {
       console.error('Cannot send command: not connected to QSys Core');
       return;
     }
@@ -522,7 +523,7 @@ export class QsysLibService implements OnDestroy {
     ).subscribe();
   }
 
-  private handleMessage(message: any): void {
+  private async handleMessage(message: any): Promise<void> {
     // Handle responses (messages with IDs)
     if (message.id !== undefined) {
       this.responses$.next(message as QsysResponse);
@@ -533,6 +534,16 @@ export class QsysLibService implements OnDestroy {
     switch (message.method) {
       case 'EngineStatus':
         const engineStatus = message.params as QsysEngineStatus;
+        const designCode = engineStatus.DesignCode;
+        if (this.designCode !== designCode) {
+          this.designCode = designCode;
+          this._components = {};
+          await this.getAllComponents();
+          Object.values(this._components).forEach(async (component) => {
+            await component.subscribe();
+          });
+          await this.changeGroupAutoPoll(AUTO_POLL_DEFAULT_ID, 0.1);
+        }
         this.engineStatus$.next(engineStatus);
 
         // Now we can mark the connection as fully established
@@ -709,6 +720,9 @@ export class QsysLibService implements OnDestroy {
    * @returns Promise with array of components @see QsysComponent
    */
   public async getAllComponents(): Promise<QsysComponent[]> {
+    if (this._components && Object.keys(this._components).length > 0) {
+      return Object.values(this._components);
+    }
     const components = await this.getComponents(true);
     components.forEach(async (component) => {
       this._components[component.Name] = new QsysComponent(this, component);

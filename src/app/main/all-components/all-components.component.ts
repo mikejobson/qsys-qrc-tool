@@ -49,21 +49,12 @@ export class AllComponentsComponent implements OnInit, OnDestroy {
   async getComponents(): Promise<void> {
     this.components = await this.api.getAllComponents();
     this.components.forEach(async (component) => {
-      console.log(component.id, component.properties);
-      console.log(`Subscribing to ${component.id}`);
       component.updated.subscribe((controls: QsysControl[]) => {
-        console.log(`Component ${component.id} updated`);
-        controls.forEach((control) => {
-          console.log(`Control ${control.name} updated, value = ${control.value}`);
-        });
         this.cd.detectChanges();
       });
-      await component.subscribe();
     });
     this.loading = false;
     this.cd.markForCheck();
-    console.log(`Subscribed to all components, settings up auto poll for ${AUTO_POLL_DEFAULT_ID} seconds`);
-    await this.api.changeGroupAutoPoll(AUTO_POLL_DEFAULT_ID, 0.5);
   }
 
   async onToggleChange(change: MatSlideToggleChange, control: QsysControl) {
