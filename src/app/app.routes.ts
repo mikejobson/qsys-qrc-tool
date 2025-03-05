@@ -6,6 +6,7 @@ import { ConnectingComponent } from './connecting/connecting.component';
 import { connectingGuard } from './connecting.guard';
 import { EngineStatusComponent } from './main/engine-status/engine-status.component';
 import { ComponentsComponent } from './main/components/components.component';
+import { AllComponentsComponent } from './main/all-components/all-components.component';
 
 export const routes: Routes = [
     { path: '', redirectTo: 'main', pathMatch: 'full' },
@@ -14,7 +15,8 @@ export const routes: Routes = [
         children: [
             { path: '', redirectTo: 'status', pathMatch: 'full' },
             { path: 'status', component: EngineStatusComponent },
-            { path: 'components', component: ComponentsComponent },
+            { path: 'component-tree', component: ComponentsComponent },
+            { path: 'components', component: AllComponentsComponent },
         ]
     },
     { path: 'connect', component: ConnectComponent },

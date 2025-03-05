@@ -1,0 +1,27 @@
+:host {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  overflow-y: auto;
+}
+
+.loading {
+  display: flex;
+  white-space: nowrap;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  position: absolute;
+  top: 50%;
+  bottom: 50%;
+  left: 50%;
+  right: 50%;
+}
+
+.contents {
+  padding: 1rem;
+}
+
+mat-divider {
+  margin-bottom: 10px;
+}

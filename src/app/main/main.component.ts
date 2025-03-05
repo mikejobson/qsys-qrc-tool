@@ -23,7 +23,8 @@ export class MainComponent implements OnInit, OnDestroy {
   private destroy$ = new Subject<void>();
   links = [
     { label: 'Engine Status', path: 'status' },
-    { label: 'Components', path: 'components' },
+    { label: 'Component Tree', path: 'component-tree' },
+    { label: 'All Components', path: 'components' },
   ];
 
   ngOnInit() {

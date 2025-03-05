@@ -1,7 +1,10 @@
-import { Injectable, OnDestroy } from '@angular/core';
+import { inject, Injectable, OnDestroy } from '@angular/core';
 import { BehaviorSubject, Observable, Subject, timer, firstValueFrom } from 'rxjs';
 import { webSocket, WebSocketSubject } from 'rxjs/webSocket';
 import { catchError, switchMap, takeUntil, tap, filter, retry, take, timeout, map } from 'rxjs/operators';
+
+export const AUTO_POLL_DEFAULT_ID = 'auto';
+const collator = new Intl.Collator(undefined, { numeric: true, sensitivity: 'base' });
 
 export interface QsysEngineStatus {
   State: string;
@@ -40,16 +43,16 @@ export interface QsysComponentProperty {
   PrettyName: string;
 }
 
-export interface QsysComponent {
+export interface QsysComponentData {
   ControlSource: number;
-  Controls: QsysControl[] | undefined;
+  Controls: QsysControlData[] | undefined;
   ID: string;
   Name: string;
   Type: string;
   Properties: QsysComponentProperty[];
 }
 
-export interface QsysControl {
+export interface QsysControlData {
   Name: string;
   Type: string;
   Value: any;
@@ -62,6 +65,232 @@ export interface QsysControl {
   Direction: string;
 }
 
+export interface QsysChangeData {
+  Component: string;
+  Name: string;
+  String: string;
+  Value: any;
+  Position: number;
+}
+
+export class QsysComponent {
+  private _data: QsysComponentData;
+  private _controls: { [name: string]: QsysControl } = {};
+  private _api: QsysLibService;
+  private _subscription: any;
+  private _updated: Subject<QsysControl[]> = new Subject<QsysControl[]>();
+
+  constructor(api: QsysLibService, data: QsysComponentData) {
+    this._api = api;
+    this._data = data;
+    if (data.Controls) {
+      for (const controlData of data.Controls) {
+        this._controls[controlData.Name] = new QsysControl(api, this, controlData);
+      }
+    }
+  }
+
+  get name(): string {
+    return this._data.Name;
+  }
+
+  get type(): string {
+    return this._data.Type;
+  }
+
+  get id(): string {
+    return this._data.ID;
+  }
+
+  get properties(): QsysComponentProperty[] {
+    return this._data.Properties;
+  }
+
+  get controls(): QsysControl[] {
+    return Object.values(this._controls);
+  }
+
+  getControl(name: string): QsysControl | undefined {
+    return this._controls[name];
+  }
+
+  async subscribe(): Promise<void> {
+    await this._api.changeGroupAddControls(AUTO_POLL_DEFAULT_ID, this.name, Object.keys(this._controls));
+    let response = await this._api.changeGroupPoll(AUTO_POLL_DEFAULT_ID);
+    response.changes.forEach((change) => {
+      let changed = [];
+      let control = this.getControl(change.Name);
+      if (control) {
+        if (control.update(change)) {
+          changed.push(control);
+        }
+      }
+      if (changed.length > 0) {
+        this._updated.next(changed);
+      }
+    });
+    if (this._subscription) return;
+    this._subscription = this._api.getChangeGroupUpdates().subscribe(async (update) => {
+      if (update.changeGroupId !== AUTO_POLL_DEFAULT_ID) {
+        return;
+      }
+      let updated = [];
+      for (const change of update.changes) {
+        if (change.Component === this.name) {
+          let control = this.getControl(change.Name);
+          if (control) {
+            if (control.update(change)) {
+              updated.push(control);
+            }
+          }
+        }
+      }
+      if (updated.length > 0) {
+        this._updated.next(updated);
+      }
+    });
+  }
+
+  get updated(): Observable<QsysControl[]> {
+    return this._updated.asObservable();
+  }
+
+  destroy(): void {
+    if (this._subscription) {
+      this._subscription.unsubscribe();
+    }
+  }
+}
+
+export class QsysControl {
+  private _component: QsysComponent;
+  private _data: QsysControlData;
+  private _api: QsysLibService;
+  private _updated: Subject<QsysControl> = new Subject<QsysControl>();
+
+  constructor(api: QsysLibService, component: QsysComponent, data: QsysControlData) {
+    this._api = api;
+    this._component = component;
+    this._data = data;
+  }
+
+  get component(): QsysComponent {
+    return this._component;
+  }
+
+  get name(): string {
+    return this._data.Name;
+  }
+
+  get type(): string {
+    return this._data.Type;
+  }
+
+  get value(): any {
+    if (this._data.Type == "Text") {
+      return this._data.String;
+    }
+    return this._data.Value;
+  }
+
+  async setValue(value: any) {
+    if (this.canWrite) {
+      let response = await this._api.setComponentValue(this.component.name, this.name, value);
+      if (response) {
+        this._data.Value = value;
+        this._updated.next(this);
+      }
+    }
+    else {
+      console.error(`Cannot write to control ${this.name}: it is read-only`);
+    }
+  }
+
+  async rampValue(value: any, ramp: number) {
+    if (this.canWrite) {
+      await this._api.setComponentValue(this.component.name, this.name, value, ramp);
+    }
+    else {
+      console.error(`Cannot write to control ${this.name}: it is read-only`);
+    }
+  }
+
+  get valueMin(): number {
+    return this._data.ValueMin;
+  }
+
+  get valueMax(): number {
+    return this._data.ValueMax;
+  }
+
+  get string(): string {
+    return this._data.String;
+  }
+
+  get stringMin(): string {
+    return this._data.StringMin;
+  }
+
+  get stringMax(): string {
+    return this._data.StringMax;
+  }
+
+  get position(): number {
+    return this._data.Position;
+  }
+
+  set position(position: number) {
+    if (this.canWrite) {
+      this._api.setComponentPosition(this.component.name, this.name, position);
+    }
+    else {
+      console.error(`Cannot write to control ${this.name}: it is read-only`);
+    }
+  }
+
+  rampPosition(position: number, ramp: number): void {
+    if (this.canWrite) {
+      this._api.setComponentPosition(this.component.name, this.name, position, ramp);
+    }
+    else {
+      console.error(`Cannot write to control ${this.name}: it is read-only`);
+    }
+  }
+
+  get canWrite(): boolean {
+    return this._data.Direction === 'Read/Write';
+  }
+
+  get updated(): Observable<QsysControl> {
+    return this._updated.asObservable();
+  }
+
+  update(change: QsysChangeData): boolean {
+    let changed = false;
+    if (change.Value !== undefined && this._data.Value != change.Value) {
+      if (this._data.Type == "Boolean") {
+        this._data.Value = Boolean(change.Value)
+      }
+      else {
+        this._data.Value = change.Value;
+      }
+      changed = true;
+    }
+    if (change.Position !== undefined && this._data.Position != change.Position) {
+      this._data.Position = change.Position;
+      changed = true;
+    }
+    if (change.String !== undefined && this._data.String != change.String) {
+      this._data.String = change.String;
+      changed = true;
+    }
+    if (changed) {
+      this._updated.next(this);
+    }
+    return changed;
+  }
+}
+
 @Injectable({
   providedIn: 'root'
 })
@@ -69,6 +298,7 @@ export class QsysLibService implements OnDestroy {
   // Connection observables
   private connectionStatus$ = new BehaviorSubject<QsysConnectionStatus>({ connected: false });
   private engineStatus$ = new BehaviorSubject<QsysEngineStatus | null>(null);
+  private changeGroupUpdates$ = new Subject<{ changeGroupId: string, changes: QsysChangeData[] }>();
   private destroy$ = new Subject<void>();
   private socket$?: WebSocketSubject<any>;
   private responses$ = new Subject<QsysResponse>();
@@ -83,6 +313,7 @@ export class QsysLibService implements OnDestroy {
   private reconnectionDelay = 3000; // 3 seconds
   private heartbeatInterval = 30000; // 30 seconds
   private _coreAddress: string | undefined
+  private _components: { [name: string]: QsysComponent } = {};
 
   constructor() { }
 
@@ -104,11 +335,11 @@ export class QsysLibService implements OnDestroy {
     this.reconnectionAttempts = 0;
 
     if (this.isConnected) {
-      console.log(`Waiting 1 second before connecting to QSys Core at ${this.coreAddress}...`);
       this.setupSocketConnection();
       return
     }
-    timer(1000)
+    console.log(`Waiting 0.5 seconds before connecting to QSys Core at ${this.coreAddress}...`);
+    timer(500)
       .pipe(takeUntil(this.destroy$))
       .subscribe(() => {
         console.log(`Now connecting to QSys Core at ${this.coreAddress}`);
@@ -171,6 +402,10 @@ export class QsysLibService implements OnDestroy {
    */
   public getEngineStatus(): Observable<QsysEngineStatus | null> {
     return this.engineStatus$.asObservable();
+  }
+
+  public getChangeGroupUpdates(): Observable<{ changeGroupId: string, changes: QsysChangeData[] }> {
+    return this.changeGroupUpdates$.asObservable();
   }
 
   /**
@@ -295,20 +530,32 @@ export class QsysLibService implements OnDestroy {
     }
 
     // Handle EngineStatus notifications
-    if (message.method === 'EngineStatus') {
-      const engineStatus = message.params as QsysEngineStatus;
-      this.engineStatus$.next(engineStatus);
+    switch (message.method) {
+      case 'EngineStatus':
+        const engineStatus = message.params as QsysEngineStatus;
+        this.engineStatus$.next(engineStatus);
 
-      // Now we can mark the connection as fully established
-      this._isConnected = true;
-      this.connectionStatus$.next({
-        connected: true,
-        engineStatus
-      });
+        // Now we can mark the connection as fully established
+        this._isConnected = true;
+        this.connectionStatus$.next({
+          connected: true,
+          engineStatus
+        });
 
-      console.log('Engine status updated:', engineStatus);
+        console.log('Engine status updated:', engineStatus);
+        break;
+
+      case 'ChangeGroup.Poll':
+        let data = { changeGroupId: message.params.Id, changes: message.params.Changes };
+        if (data.changes.length > 0) {
+          this.changeGroupUpdates$.next(data);
+        }
+        break;
+
+      default:
+        console.warn('Unhandled message method:', message.method);
+        break;
     }
-    // Handle other notification types as needed
   }
 
   private startHeartbeat(): void {
@@ -353,7 +600,7 @@ export class QsysLibService implements OnDestroy {
    * Get a list of all components in the current design
    * @returns Promise with array of component information
    */
-  public async getComponents(withControls: boolean = false): Promise<QsysComponent[]> {
+  public async getComponents(withControls: boolean = false): Promise<QsysComponentData[]> {
     const components = this.sendCommandAsync('Component.GetComponents');
     if (withControls) {
       return components.then(async (components) => {
@@ -371,9 +618,123 @@ export class QsysLibService implements OnDestroy {
    * @param componentName The name of the component
    * @returns Promise with array of control information
    */
-  public async getControls(componentName: string): Promise<QsysControl[]> {
+  public async getControls(componentName: string): Promise<QsysControlData[]> {
     const response = await this.sendCommandAsync('Component.GetControls', { Name: componentName });
-    return response.Controls;
+    return response.Controls.sort((a: { Name: string; }, b: { Name: string; }) => collator.compare(a.Name, b.Name));
+  }
+
+  /**
+   * Set the value of a control
+   * @param componentName The name of the component
+   * @param controlName The name of the control
+   * @param value The new value for the control
+   * @param ramp Optional ramp time in seconds
+   * @returns Promise with the response as a boolean indicating success
+   */
+  public async setComponentValue(componentName: string, controlName: string, value: any, ramp?: number): Promise<boolean> {
+    const response = await this.sendCommandAsync('Component.Set', {
+      Name: componentName, Controls: [{
+        Name: controlName,
+        Value: value,
+        Ramp: ramp ?? 0
+      }]
+    });
+    return response;
+  }
+
+  /**
+   * Set the position of a control
+   * @param componentName The name of the component
+   * @param controlName The name of the control
+   * @param position The new position for the control
+   * @param ramp Optional ramp time in seconds
+   * @returns Promise with the response as a boolean indicating success
+   */
+  public async setComponentPosition(componentName: string, controlName: string, position: number, ramp?: number): Promise<boolean> {
+    const response = await this.sendCommandAsync('Component.Set', {
+      Name: componentName, Controls: [{
+        Name: controlName,
+        Position: position,
+        Ramp: ramp ?? 0
+      }]
+    });
+    return response;
+  }
+
+  /**
+   * Create a new change group
+   * @param groupName The name of the change group
+   * @param componentName The name of the component the controls belong to
+   * @param controlNames The names of the controls to add to the change group
+   * @returns Promise with the response as a boolean indicating success
+   */
+  public async changeGroupAddControls(groupName: string, componentName: string, controlNames: string[]): Promise<boolean> {
+    const response = await this.sendCommandAsync('ChangeGroup.AddComponentControl', {
+      Id: groupName,
+      Component: {
+        Name: componentName,
+        Controls: controlNames.map(name => ({ Name: name }))
+      }
+    });
+    return response;
+  }
+
+  /**
+   * Poll a change group for updates
+   * @param groupName The name of the change group
+   * @returns Promise with the response as an object with the change group ID and changes
+   * (an array of QsysChangeData objects)
+   */
+  public async changeGroupPoll(groupName: string): Promise<{ changeGroupId: string, changes: QsysChangeData[] }> {
+    const response = await this.sendCommandAsync('ChangeGroup.Poll', { Id: groupName });
+    return { changeGroupId: response.Id, changes: response.Changes };
+  }
+
+  /**
+   * Change the rate of polling for a change group
+   * @param groupName the name of the change group
+   * @param rate the rate of polling in seconds
+   * @returns Promise with the response as a boolean indicating success
+   */
+  public async changeGroupAutoPoll(groupName: string, rate: number): Promise<boolean> {
+    const response = await this.sendCommandAsync('ChangeGroup.AutoPoll', { Id: groupName, Rate: rate });
+    return response;
+  }
+
+  /**
+   * Get a list of all components in the current design
+   * Using this method will cache the components for future use
+   * The components will be returned as instances of the Component class
+   * and can be subscribed to using change group control
+   * @returns Promise with array of components @see QsysComponent
+   */
+  public async getAllComponents(): Promise<QsysComponent[]> {
+    const components = await this.getComponents(true);
+    components.forEach(async (component) => {
+      this._components[component.Name] = new QsysComponent(this, component);
+    });
+    return Object.values(this._components);
+  }
+
+  /**
+   * Get a specific component by name
+   * Using this method will cache the component for future use
+   * @param componentName The name of the component
+   * @returns Promise with the component
+   */
+  public async getComponent(componentName: string): Promise<QsysComponent | undefined> {
+    if (!this._components[componentName]) {
+      const components = await this.getComponents(false);
+      let componentData = components.find((component) => component.Name === componentName);
+      if (!componentData) {
+        return undefined;
+      }
+      let controlsData = await this.getControls(componentName);
+      componentData.Controls = controlsData;
+      this._components[componentName] = new QsysComponent(this, componentData);
+      return this._components[componentName];
+    }
+    return this._components[componentName];
   }
 
   /**

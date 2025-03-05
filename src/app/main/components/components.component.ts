@@ -1,6 +1,6 @@
 import { CommonModule } from '@angular/common';
 import { ChangeDetectionStrategy, ChangeDetectorRef, Component, inject, OnDestroy, signal, type OnInit } from '@angular/core';
-import { QsysComponent, QsysLibService } from 'qsys-lib';
+import { QsysComponentData, QsysLibService } from 'qsys-lib';
 import { BehaviorSubject, map, Observable, Subject, Subscription } from 'rxjs';
 import { MatTreeModule } from '@angular/material/tree';
 import { CollectionViewer, DataSource, SelectionChange } from '@angular/cdk/collections';
@@ -23,7 +23,7 @@ export class DynamicFlatNode {
     public level = 1,
     public expandable = false,
     public isLoading = signal(false),
-    public component?: QsysComponent,
+    public component?: QsysComponentData,
     public nodeType: NodeType = NodeType.Component,
     public data?: any // For storing properties or controls
   ) { }
@@ -231,7 +231,7 @@ export class DynamicDataSource implements DataSource<DynamicFlatNode> {
     node.isLoading.set(false);
   }
 
-  initializeWithComponents(components: QsysComponent[]) {
+  initializeWithComponents(components: QsysComponentData[]) {
     // First clear any existing data
     this._dataChange.next([]);
 
@@ -273,7 +273,7 @@ export class ComponentsComponent implements OnInit, OnDestroy {
   private destroy$ = new Subject<void>();
   private api = inject(QsysLibService);
   private cd = inject(ChangeDetectorRef);
-  components: QsysComponent[] = [];
+  components: QsysComponentData[] = [];
   faSpinner = faSpinner;
   faChevronRight = faChevronRight;
   faChevronDown = faChevronDown;
