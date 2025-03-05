@@ -50,6 +50,9 @@ export class AllComponentsComponent implements OnInit, OnDestroy {
     this.components = await this.api.getAllComponents();
     this.components.forEach(async (component) => {
       component.updated.subscribe((controls: QsysControl[]) => {
+        controls.forEach((control) => {
+          console.log(`Control ${control.name} updated`);
+        });
         this.cd.detectChanges();
       });
     });
@@ -58,8 +61,32 @@ export class AllComponentsComponent implements OnInit, OnDestroy {
   }
 
   async onToggleChange(change: MatSlideToggleChange, control: QsysControl) {
-    console.log(`Toggling ${control.name} to ${change.checked}`);
+    // console.log(`Toggling ${control.name} to ${change.checked}`);
     await control.setValue(change.checked);
+    this.cd.detectChanges();
+  }
+
+  async onSliderChangeValue(change: number, control: QsysControl) {
+    console.log(`Setting ${control.name} to ${change}`);
+    await control.setValue(change);
+    this.cd.detectChanges();
+  }
+
+  async onSliderChangePosition(change: number, control: QsysControl) {
+    console.log(`Setting ${control.name} to ${change}`);
+    await control.setPosition(change);
+    this.cd.detectChanges();
+  }
+
+  async onTriggerClick(control: QsysControl) {
+    console.log(`Triggering ${control.name}`);
+    await control.trigger();
+    this.cd.detectChanges();
+  }
+
+  async onValueEditChange(event: any, control: QsysControl) {
+    console.log(`Setting ${control.name} to ${event.target.value}`);
+    await control.setValue(event.target.value);
     this.cd.detectChanges();
   }
 }

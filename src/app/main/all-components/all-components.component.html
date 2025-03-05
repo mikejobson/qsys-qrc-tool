@@ -1,10 +1,4 @@
-@if(loading){
-<div class="loading">
-  <span style="margin-bottom: 10px">Loading components...</span>
-  <fa-icon [icon]="faSpinner" animation="spin" size="2x"></fa-icon>
-</div>
-}
-
+@defer {
 <div class="contents">
   <mat-accordion>
     @for(component of components; track component) {
@@ -61,19 +55,54 @@
                 [checked]="element.value"
                 (change)="onToggleChange($event, element)"
               ></mat-slide-toggle>
-              {{ element.value }}
               } @else if(element.type === 'Float' && element.canWrite) {
               <mat-slider [min]="0" [max]="1" [step]="0.01">
-                <input matSliderThumb [value]="element.position" />
+                <input
+                  matSliderThumb
+                  [value]="element.position"
+                  (valueChange)="onSliderChangePosition($event, element)"
+                />
               </mat-slider>
+              <input
+                class="value-edit ml"
+                type="number"
+                [value]="element.value"
+                (change)="onValueEditChange($event, element)"
+              />
               } @else if(element.type === 'Integer' && element.canWrite) {
               <mat-slider
                 [min]="element.valueMin"
                 [max]="element.valueMax"
                 [step]="1"
+                showTickMarks
               >
-                <input matSliderThumb [value]="element.value" />
+                <input
+                  matSliderThumb
+                  [value]="element.value"
+                  (valueChange)="onSliderChangeValue($event, element)"
+                />
               </mat-slider>
+              <input
+                class="value-edit ml"
+                type="number"
+                [value]="element.value"
+                (change)="onValueEditChange($event, element)"
+              />
+              } @else if(element.type === 'Trigger' && element.canWrite) {
+              <button
+                mat-flat-button
+                color="primary"
+                (click)="onTriggerClick(element)"
+              >
+                Trigger
+              </button>
+              } @else if(element.type === 'Text' && element.canWrite) {
+              <input
+                class="value-edit"
+                type="text"
+                [value]="element.value"
+                (change)="onValueEditChange($event, element)"
+              />
               } @else {
               {{ element.value }}
               }
@@ -107,3 +136,8 @@
     }
   </mat-accordion>
 </div>
+} @placeholder {
+<div class="loading">
+  <h4>Loading components</h4>
+</div>
+}

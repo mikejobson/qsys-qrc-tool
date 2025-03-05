@@ -25,3 +25,15 @@
 mat-divider {
   margin-bottom: 10px;
 }
+
+mat-slider {
+  width: 200px;
+}
+
+.value-edit {
+  width: 60px;
+
+  &.ml {
+    margin-left: 10px;
+  }
+}

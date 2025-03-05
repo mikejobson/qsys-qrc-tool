@@ -121,7 +121,7 @@ export class QsysComponent {
       let changed = [];
       let control = this.getControl(change.Name);
       if (control) {
-        if (control.update(change)) {
+        if (control._update(change)) {
           changed.push(control);
         }
       }
@@ -139,7 +139,7 @@ export class QsysComponent {
         if (change.Component === this.name) {
           let control = this.getControl(change.Name);
           if (control) {
-            if (control.update(change)) {
+            if (control._update(change)) {
               updated.push(control);
             }
           }
@@ -190,16 +190,17 @@ export class QsysControl {
     if (this._data.Type == "Text") {
       return this._data.String;
     }
+    if (this._data.Type == "Float") {
+      // return rounded to nearest 1 decimal place
+      return Math.round(this._data.Value * 10) / 10;
+    }
     return this._data.Value;
   }
 
   async setValue(value: any) {
     if (this.canWrite) {
       let response = await this._api.setComponentValue(this.component.name, this.name, value);
-      if (response) {
-        this._data.Value = value;
-        this._updated.next(this);
-      }
+      await this._api._changeGroupPollInternal();
     }
     else {
       console.error(`Cannot write to control ${this.name}: it is read-only`);
@@ -239,18 +240,29 @@ export class QsysControl {
     return this._data.Position;
   }
 
-  set position(position: number) {
+  async setPosition(position: number) {
     if (this.canWrite) {
-      this._api.setComponentPosition(this.component.name, this.name, position);
+      await this._api.setComponentPosition(this.component.name, this.name, position);
+      await this._api._changeGroupPollInternal();
     }
     else {
       console.error(`Cannot write to control ${this.name}: it is read-only`);
     }
   }
 
-  rampPosition(position: number, ramp: number): void {
+  async rampPosition(position: number, ramp: number) {
     if (this.canWrite) {
-      this._api.setComponentPosition(this.component.name, this.name, position, ramp);
+      await this._api.setComponentPosition(this.component.name, this.name, position, ramp);
+    }
+    else {
+      console.error(`Cannot write to control ${this.name}: it is read-only`);
+    }
+  }
+
+  async trigger() {
+    if (this.canWrite) {
+      await this._api.setComponentValue(this.component.name, this.name, 1);
+      await this._api._changeGroupPollInternal();
     }
     else {
       console.error(`Cannot write to control ${this.name}: it is read-only`);
@@ -265,7 +277,7 @@ export class QsysControl {
     return this._updated.asObservable();
   }
 
-  update(change: QsysChangeData): boolean {
+  _update(change: QsysChangeData): boolean {
     let changed = false;
     if (change.Value !== undefined && this._data.Value != change.Value) {
       if (this._data.Type == "Boolean") {
@@ -315,6 +327,7 @@ export class QsysLibService implements OnDestroy {
   private _coreAddress: string | undefined
   private _components: { [name: string]: QsysComponent } = {};
   private designCode: string | undefined;
+  pollInternalTimeout: any;
 
   constructor() { }
 
@@ -539,19 +552,21 @@ export class QsysLibService implements OnDestroy {
           this.designCode = designCode;
           this._components = {};
           await this.getAllComponents();
-          Object.values(this._components).forEach(async (component) => {
-            await component.subscribe();
+        }
+        Object.values(this._components).forEach(async (component) => {
+          await component.subscribe();
+        });
+        await this.changeGroupAutoPoll(AUTO_POLL_DEFAULT_ID, 1);
+
+        if (!this._isConnected) {
+          // Now we can mark the connection as fully established
+          this._isConnected = true;
+          this.connectionStatus$.next({
+            connected: true,
+            engineStatus
           });
-          await this.changeGroupAutoPoll(AUTO_POLL_DEFAULT_ID, 0.1);
         }
         this.engineStatus$.next(engineStatus);
-
-        // Now we can mark the connection as fully established
-        this._isConnected = true;
-        this.connectionStatus$.next({
-          connected: true,
-          engineStatus
-        });
 
         console.log('Engine status updated:', engineStatus);
         break;
@@ -688,6 +703,14 @@ export class QsysLibService implements OnDestroy {
       }
     });
     return response;
+  }
+
+  _changeGroupPollInternal(groupName = AUTO_POLL_DEFAULT_ID) {
+    clearTimeout(this.pollInternalTimeout);
+    this.pollInternalTimeout = setTimeout(async () => {
+      let response = await this.changeGroupPoll(groupName);
+      this.changeGroupUpdates$.next(response);
+    }, 50);
   }
 
   /**
