@@ -44,18 +44,18 @@ jobs:
         run: |
           echo "DEPLOYMENT_BASE_HREF=/${{ github.event.repository.name }}/" >> $GITHUB_ENV
 
-      # Build with the correct base-href only
+      # Build with the github-pages configuration and hash routing
       - name: Build application
-        run: npm run build -- --base-href "${{ env.DEPLOYMENT_BASE_HREF }}" --configuration production
+        run: npm run build -- --base-href "${{ env.DEPLOYMENT_BASE_HREF }}" --configuration github-pages
 
       # Create a .nojekyll file to prevent GitHub Pages from ignoring files that begin with an underscore
       - name: Create .nojekyll file
         run: touch ./dist/web-app/browser/.nojekyll
 
-      # Fix absolute paths in CSS files
-      - name: Fix asset paths in CSS files
+      # Fix absolute paths in JS files if needed
+      - name: Fix asset paths in JS files
         run: |
-          find ./dist/web-app/browser -name "*.js" -type f -exec sed -i 's|url(/assets/|url(\.\/assets/|g' {} \;
+          find ./dist/web-app/browser -name "*.js" -type f -exec sed -i 's|url(/assets/|url(./assets/|g' {} \;
 
       - name: Setup Pages
         uses: actions/configure-pages@v4

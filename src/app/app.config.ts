@@ -1,9 +1,18 @@
-import { ApplicationConfig, provideZoneChangeDetection } from '@angular/core';
-import { provideRouter } from '@angular/router';
+import { ApplicationConfig } from '@angular/core';
+import { provideRouter, withHashLocation } from '@angular/router';
 
 import { routes } from './app.routes';
-import { provideAnimationsAsync } from '@angular/platform-browser/animations/async';
+
+// Check if we're using the GitHub Pages build
+const isGithubPages = window.location.hostname.includes('github.io') ||
+  window.location.href.includes('github-pages');
 
 export const appConfig: ApplicationConfig = {
-  providers: [provideZoneChangeDetection({ eventCoalescing: true }), provideRouter(routes), provideAnimationsAsync()]
+  providers: [
+    // Use hash location strategy for GitHub Pages
+    provideRouter(
+      routes,
+      ...(isGithubPages ? [withHashLocation()] : [])
+    ),
+  ]
 };
