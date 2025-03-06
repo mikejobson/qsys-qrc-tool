@@ -39,17 +39,15 @@
             class="expand-button"
             [attr.aria-label]="'Toggle ' + node.item"
           >
-            <fa-icon
-              [icon]="faSpinner"
-              animation="spin"
-              *ngIf="node.isLoading()"
-            ></fa-icon>
-            <fa-icon
-              [icon]="
-                treeControl.isExpanded(node) ? faChevronDown : faChevronRight
-              "
-              *ngIf="!node.isLoading()"
-            ></fa-icon>
+            @if(node.isLoading()) {
+            <mat-icon class="spinner">progress_spinner</mat-icon>
+            } @else {
+            <mat-icon>
+              {{
+                treeControl.isExpanded(node) ? "expand_more" : "chevron_right"
+              }}
+            </mat-icon>
+            }
           </button>
           <span
             [ngClass]="getNodeClass(node)"

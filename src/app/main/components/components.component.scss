@@ -82,4 +82,18 @@
 .expand-button {
   margin-right: 4px;
   @include mat.icon-button-overrides((icon-size: 14px));
+
+  .spinner {
+    animation: spin 1.5s linear infinite;
+  }
+
+  @keyframes spin {
+    from {
+      transform: rotate(0deg);
+    }
+
+    to {
+      transform: rotate(360deg);
+    }
+  }
 }

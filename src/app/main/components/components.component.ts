@@ -5,8 +5,7 @@ import { BehaviorSubject, map, Observable, Subject, Subscription } from 'rxjs';
 import { MatTreeModule } from '@angular/material/tree';
 import { CollectionViewer, DataSource, SelectionChange } from '@angular/cdk/collections';
 import { FlatTreeControl } from '@angular/cdk/tree';
-import { FontAwesomeModule } from '@fortawesome/angular-fontawesome';
-import { faSpinner, faChevronRight, faChevronDown } from '@fortawesome/free-solid-svg-icons';
+import { MatIconModule } from '@angular/material/icon';
 import { MatButtonModule } from '@angular/material/button';
 
 export enum NodeType {
@@ -262,7 +261,7 @@ export class DynamicDataSource implements DataSource<DynamicFlatNode> {
   imports: [
     CommonModule,
     MatTreeModule,
-    FontAwesomeModule,
+    MatIconModule,
     MatButtonModule
   ],
   templateUrl: './components.component.html',
@@ -274,9 +273,6 @@ export class ComponentsComponent implements OnInit, OnDestroy {
   private api = inject(QsysLibService);
   private cd = inject(ChangeDetectorRef);
   components: QsysComponentData[] = [];
-  faSpinner = faSpinner;
-  faChevronRight = faChevronRight;
-  faChevronDown = faChevronDown;
   NodeType = NodeType; // Make enum available in template
   loading = false;
 
