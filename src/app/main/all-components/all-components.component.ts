@@ -1,6 +1,6 @@
 import { ChangeDetectionStrategy, ChangeDetectorRef, Component, inject, OnDestroy, type OnInit } from '@angular/core';
 import { AUTO_POLL_DEFAULT_ID, QsysControl, QsysComponent, QsysLibService } from 'qsys-lib';
-import { Subject } from 'rxjs';
+import { Subject, debounceTime } from 'rxjs';
 import { MatExpansionModule } from '@angular/material/expansion';
 import { CommonModule } from '@angular/common';
 import { MatButtonModule } from '@angular/material/button';
@@ -26,11 +26,17 @@ import { faSpinner } from '@fortawesome/free-solid-svg-icons';
   templateUrl: './all-components.component.html',
   styleUrl: './all-components.component.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
+  standalone: true,
 })
 export class AllComponentsComponent implements OnInit, OnDestroy {
   private destroy$ = new Subject<void>();
   private api = inject(QsysLibService);
   private cd = inject(ChangeDetectorRef);
+
+  // Debouncing for slider position updates
+  private positionUpdate$ = new Subject<{ position: number, control: QsysControl }>();
+  private valueUpdate$ = new Subject<{ value: number, control: QsysControl }>();
+
   components: QsysComponent[] = [];
   displayedPropertyColumns: string[] = ['PrettyName', 'Name', 'Value'];
   displayedControlColumns: string[] = ['name', 'type', 'value', 'string', 'stringMin', 'stringMax', 'canWrite'];
@@ -39,6 +45,19 @@ export class AllComponentsComponent implements OnInit, OnDestroy {
 
   ngOnInit(): void {
     this.getComponents();
+
+    // Setup debouncing for slider updates to avoid overwhelming the QSys Core
+    this.positionUpdate$.pipe(
+      debounceTime(50), // Send updates at most every 50ms while sliding
+    ).subscribe(data => {
+      this.performPositionUpdate(data.position, data.control);
+    });
+
+    this.valueUpdate$.pipe(
+      debounceTime(50), // Send updates at most every 50ms while sliding
+    ).subscribe(data => {
+      this.performValueUpdate(data.value, data.control);
+    });
   }
 
   ngOnDestroy(): void {
@@ -50,9 +69,9 @@ export class AllComponentsComponent implements OnInit, OnDestroy {
     this.components = await this.api.getAllComponents();
     this.components.forEach(async (component) => {
       component.updated.subscribe((controls: QsysControl[]) => {
-        controls.forEach((control) => {
-          console.log(`Control ${control.name} updated`);
-        });
+        // controls.forEach((control) => {
+        //   console.log(`Control ${control.name} updated`);
+        // });
         this.cd.detectChanges();
       });
     });
@@ -61,20 +80,51 @@ export class AllComponentsComponent implements OnInit, OnDestroy {
   }
 
   async onToggleChange(change: MatSlideToggleChange, control: QsysControl) {
-    // console.log(`Toggling ${control.name} to ${change.checked}`);
     await control.setValue(change.checked);
     this.cd.detectChanges();
   }
 
-  async onSliderChangeValue(change: number, control: QsysControl) {
-    console.log(`Setting ${control.name} to ${change}`);
-    await control.setValue(change);
+  // New unified input handler to handle the event safely
+  onSliderInput(event: Event, control: QsysControl, type: 'value' | 'position'): void {
+    // Safely extract the value from the event
+    const inputElement = event.target as HTMLInputElement;
+    if (inputElement && inputElement.value !== undefined) {
+      const numValue = Number(inputElement.value);
+
+      if (type === 'position') {
+        this.positionUpdate$.next({ position: numValue, control });
+      } else {
+        this.valueUpdate$.next({ value: numValue, control });
+      }
+
+      // Update UI immediately for responsive feel
+      this.cd.detectChanges();
+    }
+  }
+
+  // Use this for collecting slider value events while sliding
+  onSliderChangeValue(value: number, control: QsysControl) {
+    this.valueUpdate$.next({ value, control });
+    // Update UI immediately for responsive feel
     this.cd.detectChanges();
   }
 
-  async onSliderChangePosition(change: number, control: QsysControl) {
-    console.log(`Setting ${control.name} to ${change}`);
-    await control.setPosition(change);
+  // Use this for collecting slider position events while sliding
+  onSliderChangePosition(position: number, control: QsysControl) {
+    this.positionUpdate$.next({ position, control });
+    // Update UI immediately for responsive feel
+    this.cd.detectChanges();
+  }
+
+  // Actually perform the position update (debounced)
+  private async performPositionUpdate(position: number, control: QsysControl) {
+    await control.setPosition(position);
+    this.cd.detectChanges();
+  }
+
+  // Actually perform the value update (debounced)
+  private async performValueUpdate(value: number, control: QsysControl) {
+    await control.setValue(value);
     this.cd.detectChanges();
   }
 

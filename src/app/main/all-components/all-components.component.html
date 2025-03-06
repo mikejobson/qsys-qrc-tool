@@ -65,7 +65,7 @@
                   <input
                     matSliderThumb
                     [value]="element.position"
-                    (valueChange)="onSliderChangePosition($event, element)"
+                    (input)="onSliderInput($event, element, 'position')"
                   />
                 </mat-slider>
                 <input
@@ -84,7 +84,7 @@
                   <input
                     matSliderThumb
                     [value]="element.value"
-                    (valueChange)="onSliderChangeValue($event, element)"
+                    (input)="onSliderInput($event, element, 'value')"
                   />
                 </mat-slider>
                 <input
