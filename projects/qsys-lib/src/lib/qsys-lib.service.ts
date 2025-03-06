@@ -23,6 +23,7 @@ export interface QsysEngineStatusStatus {
 
 export interface QsysConnectionStatus {
   connected: boolean;
+  noReconnect?: boolean;
   engineStatus?: QsysEngineStatus;
 }
 
@@ -334,7 +335,8 @@ export class QsysLibService implements OnDestroy {
    * Connect to a QSys Core
    * @param ipAddressOrHostname The IP address or hostname of the QSys Core
    */
-  public connect(ipAddressOrHostname: string): void {
+  public connect(ipAddressOrHostname: string, maxReconnectionAttempts = 0): void {
+    this.maxReconnectionAttempts = maxReconnectionAttempts;
     this.coreAddress = ipAddressOrHostname;
     console.log('Connecting to QSys Core at', this.coreAddress);
     if (!this.coreAddress) {
@@ -345,18 +347,8 @@ export class QsysLibService implements OnDestroy {
     // Allow reconnection attempts again
     this.reconnecting = true;
     this.reconnectionAttempts = 0;
-
-    if (this.isConnected) {
-      this.setupSocketConnection();
-      return
-    }
-    console.log(`Waiting 0.5 seconds before connecting to QSys Core at ${this.coreAddress}...`);
-    timer(500)
-      .pipe(takeUntil(this.destroy$))
-      .subscribe(() => {
-        console.log(`Now connecting to QSys Core at ${this.coreAddress}`);
-        this.setupSocketConnection();
-      });
+    this.connectionStatus$.next({ connected: false, noReconnect: false });
+    this.setupSocketConnection();
   }
 
   public disconnect(): void {
@@ -375,7 +367,7 @@ export class QsysLibService implements OnDestroy {
 
     // Update connection state
     this._isConnected = false;
-    this.connectionStatus$.next({ connected: false });
+    this.connectionStatus$.next({ connected: false, noReconnect: true });
 
     // Don't emit on destroy$ yet (this would terminate everything including this method)
     // Instead, only emit if we're truly destroying the service
@@ -577,12 +569,14 @@ export class QsysLibService implements OnDestroy {
   private attemptReconnection(): void {
     // First check if reconnection is explicitly disabled
     if (!this.reconnecting) {
+      this.connectionStatus$.next({ connected: false, noReconnect: true });
       console.log('Reconnection disabled, not attempting to reconnect');
       return;
     }
 
     // Then check max attempts
     if (this.maxReconnectionAttempts > 0 && this.reconnectionAttempts >= this.maxReconnectionAttempts) {
+      this.connectionStatus$.next({ connected: false, noReconnect: true });
       console.error('Max reconnection attempts reached');
       return;
     }

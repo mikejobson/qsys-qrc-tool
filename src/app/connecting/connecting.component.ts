@@ -31,6 +31,9 @@ export class ConnectingComponent implements OnInit, OnDestroy {
         if (status.connected) {
           this.router.navigate([returnUrl || '/']);
         }
+        else if (status.noReconnect) {
+          this.router.navigate(['/connect'], { queryParams: { failed: true } });
+        }
       });
     });
   }

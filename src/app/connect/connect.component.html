@@ -4,7 +4,7 @@
       <img class="logo" src="images/qsys-logo.svg" />
     </mat-card-header>
     <mat-card-content>
-      <p>Core connection details</p>
+      <h1>QRC Testing Tool</h1>
       <form>
         <mat-form-field appearance="outline">
           <mat-label>Core Connection</mat-label>
@@ -25,4 +25,34 @@
       </form>
     </mat-card-content>
   </mat-card>
+</div>
+
+@if(showFailed) {
+<div class="error">
+  <p class="error-message">
+    Failed to connect to the core. Please check the Core address and try again.
+  </p>
+  <p>
+    If you are using a self-signed certificate, you will need to add it to your
+    trusted certificates.
+  </p>
+  <p>
+    Read the
+    <a
+      href="https://github.com/mikejobson/qsys-qrc-tool?tab=readme-ov-file#-connecting-to-q-sys-core-devices"
+    >
+      docs about certificates</a
+    >
+  </p>
+</div>
+}
+
+<div class="project-link">
+  <img class="logo" width="30px" src="images/github-mark.svg" />
+  <span
+    >Learn more about the project on github:
+    <a href="https://github.com/mikejobson/qsys-qrc-tool"
+      >QRC Testing Tool</a
+    ></span
+  >
 </div>
