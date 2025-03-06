@@ -126,7 +126,7 @@ Continuous Integration and Deployment is managed through GitHub Actions:
 ### Demo Version
 
 A live demo of the latest version is automatically deployed to GitHub Pages with each push to the main branch:
-[https://yourusername.github.io/qsys-web-test/](https://yourusername.github.io/qsys-web-test/)
+[https://mikejobson.github.io/qsys-qrc-tool/](https://mikejobson.github.io/qsys-qrc-tool/)
 
 ## 🔌 Connecting to Q-SYS Core Devices
 
