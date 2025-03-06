@@ -1,44 +1,237 @@
 # QsysLib
 
-This project was generated using [Angular CLI](https://github.com/angular/angular-cli) version 19.2.0.
+QsysLib is an Angular service for communicating with QSC Q-Sys cores over WebSocket using the QRC (Q-Sys Remote Control) protocol.
 
-## Code scaffolding
+## Installation
 
-Angular CLI includes powerful code scaffolding tools. To generate a new component, run:
-
-```bash
-ng generate component component-name
-```
-
-For a complete list of available schematics (such as `components`, `directives`, or `pipes`), run:
+Install the library from npm:
 
 ```bash
-ng generate --help
+npm install @mikejobson/qsys-lib
 ```
 
-## Building
+You can view the package on npm here: [https://www.npmjs.com/package/@mikejobson/qsys-lib](https://www.npmjs.com/package/@mikejobson/qsys-lib)
 
-To build the library, run:
+## Setup
+
+1. Import the `QsysLibModule` in your app module:
+
+```typescript
+import { QsysLibModule } from "@mikejobson/qsys-lib";
+
+@NgModule({
+  imports: [
+    QsysLibModule,
+    // other imports
+  ],
+  // ...
+})
+export class AppModule {}
+```
+
+2. Inject the `QsysLibService` in your components:
+
+```typescript
+import { QsysLibService } from "@mikejobson/qsys-lib";
+
+@Component({
+  // ...
+})
+export class YourComponent {
+  constructor(private qsys: QsysLibService) {}
+}
+```
+
+## Basic Usage
+
+### Connecting to a Q-Sys Core
+
+```typescript
+// Connect to a Q-Sys Core with IP address or hostname
+this.qsys.connect("192.168.1.100");
+
+// Optional parameter for maximum reconnection attempts (default is 0 - infinite attempts)
+this.qsys.connect("192.168.1.100", 5);
+
+// Monitor connection status
+this.qsys.getConnectionStatus().subscribe((status) => {
+  if (status.connected) {
+    console.log("Connected to Q-Sys Core");
+    console.log("Engine status:", status.engineStatus);
+  } else {
+    console.log("Disconnected from Q-Sys Core");
+    if (status.noReconnect) {
+      console.log("No reconnection will be attempted");
+    }
+  }
+});
+
+// Disconnect when done
+this.qsys.disconnect();
+```
+
+### Getting Engine Status
+
+```typescript
+this.qsys.getEngineStatus().subscribe((status) => {
+  if (status) {
+    console.log("Design name:", status.DesignName);
+    console.log("Platform:", status.Platform);
+    console.log("Status:", status.Status.String);
+  } else {
+    console.log("No engine status available");
+  }
+});
+```
+
+### Working with Components
+
+```typescript
+// Get all components in the design
+const components = await this.qsys.getAllComponents();
+components.forEach((component) => {
+  console.log(`Component: ${component.name}, Type: ${component.type}`);
+});
+
+// Get a specific component by name
+const mixer = await this.qsys.getComponent("MainMixer");
+if (mixer) {
+  console.log(`Found mixer: ${mixer.name}`);
+
+  // Get component properties
+  console.log("Properties:", mixer.properties);
+
+  // Get controls
+  mixer.controls.forEach((control) => {
+    console.log(`Control: ${control.name}, Type: ${control.type}, Value: ${control.value}`);
+  });
+
+  // Get a specific control
+  const fader = mixer.getControl("fader1");
+  if (fader) {
+    console.log(`Current fader value: ${fader.value}`);
+  }
+}
+```
+
+### Controlling Components
+
+```typescript
+// Change a control's value
+const mixer = await this.qsys.getComponent("MainMixer");
+const fader = mixer?.getControl("fader1");
+if (fader) {
+  // Set value directly
+  await fader.setValue(0.8);
+
+  // With ramping (time in seconds)
+  await fader.rampValue(0.5, 2.5);
+
+  // Set position (for controls that support it, values between 0-1)
+  await fader.setPosition(0.5); // 50%
+
+  // With ramping
+  await fader.rampPosition(0.75, 3.0); // Ramp to 75% over 3 seconds
+
+  // For trigger controls
+  if (fader.type === "Trigger") {
+    await fader.trigger();
+  }
+}
+```
+
+### Subscribing to Control Changes
+
+```typescript
+// Subscribe to updates for a specific control
+const mixer = await this.qsys.getComponent("MainMixer");
+const fader = mixer?.getControl("fader1");
+if (fader) {
+  fader.updated.subscribe((control) => {
+    console.log(`Fader updated: ${control.value}`);
+  });
+
+  // Subscribe to all controls in a component
+  mixer.updated.subscribe((controls) => {
+    console.log(
+      "Updated controls:",
+      controls.map((c) => c.name)
+    );
+  });
+
+  // Make sure to subscribe to receive updates
+  await mixer.subscribe();
+}
+```
+
+### Using Direct Commands
+
+```typescript
+// Send a command and get the response
+try {
+  const response = await this.qsys.sendCommandAsync("Component.GetComponents", {});
+  console.log("Components:", response);
+} catch (error) {
+  console.error("Error:", error);
+}
+
+// Send a notification (no response)
+this.qsys.sendNotification("NoOp", {});
+```
+
+### Change Groups
+
+```typescript
+// Create a change group with specific controls
+const groupId = "myGroup";
+await this.qsys.changeGroupAddControls(groupId, "MainMixer", ["fader1", "mute1"]);
+
+// Poll the change group manually
+const changes = await this.qsys.changeGroupPoll(groupId);
+console.log("Changes:", changes);
+
+// Set up auto-polling (rate in seconds)
+await this.qsys.changeGroupAutoPoll(groupId, 0.5);
+
+// Listen for change group updates
+this.qsys.getChangeGroupUpdates().subscribe((update) => {
+  if (update.changeGroupId === groupId) {
+    console.log("Updates:", update.changes);
+  }
+});
+```
+
+## Building and Publishing
+
+This library is automatically built and published to npm using GitHub Actions when changes are pushed to the main branch.
+
+### Automated Publishing Workflow
+
+1. When changes are pushed to the `main` branch that affect files in the `projects/qsys-lib/` directory, a GitHub Actions workflow is triggered.
+2. The workflow builds the library and checks if the version in `package.json` has been incremented.
+3. If the version has been updated, the workflow automatically publishes the new version to npm.
+
+### Contributing Changes
+
+If you're contributing changes to this library:
+
+1. Make your changes in a feature branch
+2. Update the version in `projects/qsys-lib/package.json` according to [semver](https://semver.org/) guidelines:
+   - Patch version for backwards compatible bug fixes (0.2.2 → 0.2.3)
+   - Minor version for backwards compatible new features (0.2.2 → 0.3.0)
+   - Major version for breaking changes (0.2.2 → 1.0.0)
+3. Create a pull request targeting the `main` branch
+4. Once merged, the GitHub Actions workflow will automatically publish the new version
+
+### Manual Building
+
+To build the library locally for testing:
 
 ```bash
 ng build qsys-lib
 ```
 
-This command will compile your project, and the build artifacts will be placed in the `dist/` directory.
-
-### Publishing the Library
-
-Once the project is built, you can publish your library by following these steps:
-
-1. Navigate to the `dist` directory:
-   ```bash
-   cd dist/qsys-lib
-   ```
-
-2. Run the `npm publish` command to publish your library to the npm registry:
-   ```bash
-   npm publish
-   ```
+This command will compile the library, and the build artifacts will be placed in the `dist/` directory.
 
 ## Running unit tests
 
@@ -47,16 +240,6 @@ To execute unit tests with the [Karma](https://karma-runner.github.io) test runn
 ```bash
 ng test
 ```
-
-## Running end-to-end tests
-
-For end-to-end (e2e) testing, run:
-
-```bash
-ng e2e
-```
-
-Angular CLI does not come with an end-to-end testing framework by default. You can choose one that suits your needs.
 
 ## Additional Resources
 

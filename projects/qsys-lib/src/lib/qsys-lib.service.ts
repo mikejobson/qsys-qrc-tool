@@ -237,10 +237,17 @@ export class QsysControl {
     return this._data.StringMax;
   }
 
+  /**
+   * Get the current position of the control (value between 0-1)
+   */
   get position(): number {
     return this._data.Position;
   }
 
+  /**
+   * Set the position of a control
+   * @param position The new position for the control (value between 0-1)
+   */
   async setPosition(position: number) {
     if (this.canWrite) {
       await this._api.setComponentPosition(this.component.name, this.name, position);
@@ -251,6 +258,11 @@ export class QsysControl {
     }
   }
 
+  /**
+   * Ramp the position of a control over time
+   * @param position The target position (value between 0-1)
+   * @param ramp Time in seconds to reach the target position
+   */
   async rampPosition(position: number, ramp: number) {
     if (this.canWrite) {
       await this._api.setComponentPosition(this.component.name, this.name, position, ramp);
@@ -645,7 +657,7 @@ export class QsysLibService implements OnDestroy {
    * Set the position of a control
    * @param componentName The name of the component
    * @param controlName The name of the control
-   * @param position The new position for the control
+   * @param position The new position for the control (value between 0-1)
    * @param ramp Optional ramp time in seconds
    * @returns Promise with the response as a boolean indicating success
    */
