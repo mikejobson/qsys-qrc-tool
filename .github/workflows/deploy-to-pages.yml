@@ -55,7 +55,7 @@ jobs:
       # Fix absolute paths in JS files if needed
       - name: Fix asset paths in JS files
         run: |
-          find ./dist/web-app/browser -name "*.js" -type f -exec sed -i 's|url(/assets/|url(./assets/|g' {} \;
+          find ./dist/web-app/browser -name "*.js" -type f -exec sed -i 's|url(/images/|url(./images/|g' {} \;
 
       - name: Setup Pages
         uses: actions/configure-pages@v4
