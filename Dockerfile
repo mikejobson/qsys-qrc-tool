@@ -22,13 +22,13 @@ RUN npm run build
 RUN ls -la dist || echo "dist directory not found"
 
 # Production stage
-FROM nginx:alpine as production
+FROM nginx:alpine AS production
 
 # Remove default nginx static assets
 RUN rm -rf /usr/share/nginx/html/*
 
 # Copy built files from build stage to nginx serve directory
-COPY --from=build /app/dist/qsys-web-test/browser /usr/share/nginx/html
+COPY --from=build /app/dist/web-app/browser /usr/share/nginx/html
 
 # Verify the copied files
 RUN ls -la /usr/share/nginx/html || echo "No files copied to nginx directory"
