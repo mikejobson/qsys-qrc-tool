@@ -1,5 +1,10 @@
-# Build stage
-FROM node:20-alpine AS build
+# Build stage - using multi-stage and multi-platform build
+FROM --platform=$BUILDPLATFORM node:20-alpine AS build
+
+# Add support for different architectures
+ARG BUILDPLATFORM
+ARG TARGETPLATFORM
+RUN echo "Building on $BUILDPLATFORM for $TARGETPLATFORM"
 
 WORKDIR /app
 
@@ -22,7 +27,7 @@ RUN npm run build
 RUN ls -la dist || echo "dist directory not found"
 
 # Production stage
-FROM nginx:alpine AS production
+FROM --platform=$TARGETPLATFORM nginx:alpine AS production
 
 # Remove default nginx static assets
 RUN rm -rf /usr/share/nginx/html/*
@@ -39,5 +44,9 @@ COPY nginx-spa.conf /etc/nginx/conf.d/default.conf
 # Expose port 80
 EXPOSE 80
 
-# Test nginx configuration
+# Add healthcheck
+HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
+    CMD wget -qO- http://localhost/ || exit 1
+
+# Start nginx
 CMD ["nginx", "-g", "daemon off;"]
