@@ -45,37 +45,13 @@ jobs:
           echo "DEPLOYMENT_BASE_HREF=/${{ github.event.repository.name }}/" >> $GITHUB_ENV
           echo "ASSETS_BASE_PATH=/${{ github.event.repository.name }}" >> $GITHUB_ENV
 
-      # Build with the correct base-href and environment configuration
+      # Build with the correct base-href and deploy-url configuration
       - name: Build application
-        run: npm run build -- --base-href "${{ env.DEPLOYMENT_BASE_HREF }}" --configuration production
+        run: npm run build -- --base-href "${{ env.DEPLOYMENT_BASE_HREF }}" --deploy-url "${{ env.DEPLOYMENT_BASE_HREF }}" --configuration production
 
       # Create a .nojekyll file to prevent GitHub Pages from ignoring files that begin with an underscore
       - name: Create .nojekyll file
         run: touch ./dist/web-app/browser/.nojekyll
-
-      # Fix asset paths in generated HTML and CSS files
-      - name: Fix asset paths
-        run: |
-          find ./dist/web-app/browser -name "*.html" -exec sed -i "s|=\"/assets/|=\"${{ env.ASSETS_BASE_PATH }}/assets/|g" {} \;
-          find ./dist/web-app/browser -name "*.css" -exec sed -i "s|url(\"/assets/|url(\"${{ env.ASSETS_BASE_PATH }}/assets/|g" {} \;
-          # Also fix paths to the docs/images if they're referenced directly
-          find ./dist/web-app/browser -name "*.html" -exec sed -i "s|=\"/docs/images/|=\"${{ env.ASSETS_BASE_PATH }}/docs/images/|g" {} \;
-
-      # Handle image paths - copy from public directory to the correct location
-      - name: Copy images from public folder
-        run: |
-          # Copy all public assets maintaining their structure
-          cp -r ./public/* ./dist/web-app/browser/ || echo "No public files to copy"
-          # If you have docs/images referenced specifically, ensure that directory exists
-          mkdir -p ./dist/web-app/browser/docs/images
-
-      # Debug step to verify the files are in place
-      - name: Debug file structure
-        run: |
-          echo "Contents of dist/web-app/browser:"
-          ls -la ./dist/web-app/browser
-          echo "Contents of docs directory (if it exists):"
-          ls -la ./dist/web-app/browser/docs || echo "No docs directory"
 
       - name: Setup Pages
         uses: actions/configure-pages@v4
