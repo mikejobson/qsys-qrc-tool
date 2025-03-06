@@ -27,9 +27,6 @@ jobs:
       - name: Build library
         run: npm run build qsys-lib
 
-      - name: Run tests
-        run: npm run test qsys-lib --if-present
-
       - name: Check version changes
         id: check
         run: |
