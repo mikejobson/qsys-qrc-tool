@@ -46,7 +46,7 @@ jobs:
 
       # Build with the github-pages configuration and hash routing
       - name: Build application
-        run: npm run build --base-href "${{ env.DEPLOYMENT_BASE_HREF }}"
+        run: npm run build -- --base-href "${{ env.DEPLOYMENT_BASE_HREF }}"
 
       # Create a .nojekyll file to prevent GitHub Pages from ignoring files that begin with an underscore
       - name: Create .nojekyll file
