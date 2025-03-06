@@ -20,11 +20,11 @@
 }
 
 .container:after {
-  background: transparent url(/bg-right-data-lines.svg) no-repeat 50%
+  background: transparent url('/assets/bg-right-data-lines.svg') no-repeat 50%
 }
 
 .container:before {
-  background: transparent url(/bg-left-data-lines.svg) no-repeat 50%
+  background: transparent url('/assets/bg-left-data-lines.svg') no-repeat 50%
 }
 
 mat-card {
