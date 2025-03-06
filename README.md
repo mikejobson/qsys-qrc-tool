@@ -121,6 +121,12 @@ Continuous Integration and Deployment is managed through GitHub Actions:
   - Builds the library and application
   - Publishes the Docker image to Docker Hub
   - Tags the image based on version and with 'latest'
+  - Deploys the app to GitHub Pages
+
+### Demo Version
+
+A live demo of the latest version is automatically deployed to GitHub Pages with each push to the main branch:
+[https://yourusername.github.io/qsys-web-test/](https://yourusername.github.io/qsys-web-test/)
 
 ## 🔌 Connecting to Q-SYS Core Devices
 
