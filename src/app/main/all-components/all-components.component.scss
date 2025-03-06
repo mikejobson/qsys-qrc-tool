@@ -36,6 +36,10 @@ mat-slider {
   &.ml {
     margin-left: 10px;
   }
+
+  &.text {
+    width: auto;
+  }
 }
 
 .led {
