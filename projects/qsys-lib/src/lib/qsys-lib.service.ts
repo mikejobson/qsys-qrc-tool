@@ -25,6 +25,7 @@ export interface QsysConnectionStatus {
   connected: boolean;
   noReconnect?: boolean;
   engineStatus?: QsysEngineStatus;
+  newDesign?: boolean;  // Flag to indicate if the design code has changed
 }
 
 export interface QsysResponse {
@@ -531,6 +532,10 @@ export class QsysLibService implements OnDestroy {
       case 'EngineStatus':
         const engineStatus = message.params as QsysEngineStatus;
         const designCode = engineStatus.DesignCode;
+
+        // Check if this is a new design code
+        const isNewDesign = this.designCode !== undefined && this.designCode !== designCode;
+
         if (this.designCode !== designCode) {
           this.designCode = designCode;
           this._components = {};
@@ -546,7 +551,8 @@ export class QsysLibService implements OnDestroy {
           this._isConnected = true;
           this.connectionStatus$.next({
             connected: true,
-            engineStatus
+            engineStatus,
+            newDesign: isNewDesign
           });
         }
         this.engineStatus$.next(engineStatus);

@@ -58,6 +58,12 @@ this.qsys.getConnectionStatus().subscribe((status) => {
   if (status.connected) {
     console.log("Connected to Q-Sys Core");
     console.log("Engine status:", status.engineStatus);
+
+    // Check if the design has changed since last connection
+    if (status.newDesign) {
+      console.log("The Q-Sys design has changed, refreshing components");
+      // Reload your components here as needed
+    }
   } else {
     console.log("Disconnected from Q-Sys Core");
     if (status.noReconnect) {
@@ -76,6 +82,7 @@ this.qsys.disconnect();
 this.qsys.getEngineStatus().subscribe((status) => {
   if (status) {
     console.log("Design name:", status.DesignName);
+    console.log("Design Code:", status.DesignCode);
     console.log("Platform:", status.Platform);
     console.log("Status:", status.Status.String);
   } else {
@@ -85,6 +92,11 @@ this.qsys.getEngineStatus().subscribe((status) => {
 ```
 
 ### Working with Components
+
+When the service connects to the api for the first time, the service requests all available components and controls from the websocket connection.
+The components are cached and monitored using a default change group named 'auto'. This is also set to poll after controls are changed locally, and listen at a default rate for external changes.
+
+If the connection drops it should re-establish the change groups automatically as long as the design code is the same. If the design code has changed, note that all objects cached are removed and you should get the component and controls again. The old objects of these will not update otherwise or may be non-existant in the design.
 
 ```typescript
 // Get all components in the design
@@ -119,24 +131,28 @@ if (mixer) {
 ```typescript
 // Change a control's value
 const mixer = await this.qsys.getComponent("MainMixer");
-const fader = mixer?.getControl("fader1");
-if (fader) {
-  // Set value directly
-  await fader.setValue(0.8);
+const gain = mixer?.getControl("input.1.gain");
+if (gain) {
+  // Set value directly to -20dB
+  await gain.setValue(-20);
 
-  // With ramping (time in seconds)
-  await fader.rampValue(0.5, 2.5);
+  // With ramping (time in seconds), sets value to 0dB over 2.5 seconds
+  await gain.rampValue(0, 2.5);
 
-  // Set position (for controls that support it, values between 0-1)
-  await fader.setPosition(0.5); // 50%
+  // Set position (for controls that support it, values between 0-1) of gain to half way
+  await gain.setPosition(0.5); // 50%
 
   // With ramping
-  await fader.rampPosition(0.75, 3.0); // Ramp to 75% over 3 seconds
+  await gain.rampPosition(0.75, 3.0); // Ramp to 75% over 3 seconds
+}
 
-  // For trigger controls
-  if (fader.type === "Trigger") {
-    await fader.trigger();
-  }
+const mute = mixer?.getControl("input.1.mute");
+if (mute) {
+  // Read the mute value as a Boolean
+  var muteValue: Boolean = gain.value;
+
+  // Set the value
+  await mute.setValue(true);
 }
 ```
 
@@ -145,7 +161,7 @@ if (fader) {
 ```typescript
 // Subscribe to updates for a specific control
 const mixer = await this.qsys.getComponent("MainMixer");
-const fader = mixer?.getControl("fader1");
+const fader = mixer?.getControl("input.1.gain");
 if (fader) {
   fader.updated.subscribe((control) => {
     console.log(`Fader updated: ${control.value}`);
@@ -158,13 +174,14 @@ if (fader) {
       controls.map((c) => c.name)
     );
   });
-
-  // Make sure to subscribe to receive updates
-  await mixer.subscribe();
 }
 ```
 
 ### Using Direct Commands
+
+Direct commands allow asynchronous comms directly to the QRC protocol rather than using the object methods above.
+
+Note these methods don't return object classes with notifications and control methods, but rather just the data which may be easier for simple tasks.
 
 ```typescript
 // Send a command and get the response
@@ -175,8 +192,57 @@ try {
   console.error("Error:", error);
 }
 
-// Send a notification (no response)
-this.qsys.sendNotification("NoOp", {});
+// You can also use the getComponents method to receive data for each component.
+try {
+  const response = await this.qsys.getComponents();
+  console.log("Components:", response);
+} catch (error) {
+  console.error("Error:", error);
+}
+
+// Alternatively you can include the controls in there also
+try {
+  const response = await this.qsys.getComponents(true);
+  console.log("Components with controls:", response);
+} catch (error) {
+  console.error("Error:", error);
+}
+
+// Get controls for a specific component
+try {
+  const controls = await this.qsys.getControls("MainMixer");
+  console.log("Controls:", controls);
+
+  // Controls are sorted by name and contain properties like:
+  // Name, Type, Value, ValueMin, ValueMax, String, Position, Direction
+} catch (error) {
+  console.error("Error:", error);
+}
+
+// Set a component's control value directly
+try {
+  // Set a gain control to -10 dB
+  await this.qsys.setComponentValue("MainMixer", "input.1.gain", -10);
+
+  // Set a gain control to -20 dB with a 2 second ramp
+  await this.qsys.setComponentValue("MainMixer", "input.1.gain", -20, 2);
+
+  // Set a mute control to true
+  await this.qsys.setComponentValue("MainMixer", "input.1.mute", true);
+} catch (error) {
+  console.error("Error:", error);
+}
+
+// Set a component's position directly (values between 0-1)
+try {
+  // Set a fader to 50%
+  await this.qsys.setComponentPosition("MainMixer", "input.1.gain", 0.5);
+
+  // Set a fader to 75% with a 3 second ramp
+  await this.qsys.setComponentPosition("MainMixer", "input.1.gain", 0.75, 3);
+} catch (error) {
+  console.error("Error:", error);
+}
 ```
 
 ### Change Groups

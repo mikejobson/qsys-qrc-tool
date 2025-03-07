@@ -1,6 +1,6 @@
 {
   "name": "@mikejobson/qsys-lib",
-  "version": "0.2.2",
+  "version": "0.3.0",
   "peerDependencies": {
     "@angular/common": "^19.2.0",
     "@angular/core": "^19.2.0"
