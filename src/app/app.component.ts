@@ -21,9 +21,9 @@ export class AppComponent implements OnInit, OnDestroy {
   showHeader = false;
 
   constructor() {
-    let address = localStorage.getItem('coreAddress');
+    let address = localStorage.getItem('websocketUrl');
     if (address) {
-      this.api.coreAddress = address;
+      this.api.websocketUrl = address;
     }
   }
 
@@ -40,8 +40,8 @@ export class AppComponent implements OnInit, OnDestroy {
       let path = event.url.split('?')[0];
       if (path == '/connect') return;
       this.firstCheck = false;
-      if (this.api.coreAddress) {
-        this.api.connect(this.api.coreAddress, 2);
+      if (this.api.websocketUrl) {
+        this.api.connect(this.api.websocketUrl, 2);
       }
     });
   }

@@ -29,7 +29,7 @@ export class MainComponent implements OnInit, OnDestroy {
 
   ngOnInit() {
     this.api.getConnectionStatus().pipe(takeUntil(this.destroy$)).subscribe((status) => {
-      if (!status.connected && this.api.coreAddress && this.api.coreAddress.length > 0) {
+      if (!status.connected && this.api.websocketUrl) {
         this.router.navigate(['/connecting']);
       }
       else if (!status.connected) {

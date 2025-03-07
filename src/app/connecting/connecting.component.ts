@@ -20,7 +20,7 @@ export class ConnectingComponent implements OnInit, OnDestroy {
   private destroy$ = new Subject<void>();
 
   ngOnInit() {
-    if (!this.api.coreAddress || this.api.coreAddress.length == 0) {
+    if (!this.api.websocketUrl || this.api.websocketUrl.length == 0) {
       this.router.navigate(['/connect']);
       return;
     }

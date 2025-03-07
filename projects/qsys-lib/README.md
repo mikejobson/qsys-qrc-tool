@@ -49,6 +49,25 @@ export class YourComponent {
 ```typescript
 // Connect to a Q-Sys Core with IP address or hostname
 this.qsys.connect("192.168.1.100");
+// Formats to "wss://192.168.1.100/qrc"
+
+// Connect using a path - uses the current host with the specified path
+this.qsys.connect("/api/qrc");
+// Formats to "wss://current.host.com/api/qrc"
+
+// Specify the full WebSocket URL directly
+this.qsys.connect("wss://my-qsys-core.example.com/qrc");
+
+// Use the static helper method to format the URL
+const wsUrl = QsysLibService.formatWebsocketUrl("192.168.1.100");
+this.qsys.connect(wsUrl);
+
+// Get the current WebSocket URL
+console.log(this.qsys.websocketUrl);
+
+// Set the WebSocket URL directly (doesn't connect automatically)
+this.qsys.websocketUrl = "wss://another-core.example.com/qrc";
+this.qsys.connect(this.qsys.websocketUrl);
 
 // Optional parameter for maximum reconnection attempts (default is 0 - infinite attempts)
 this.qsys.connect("192.168.1.100", 5);

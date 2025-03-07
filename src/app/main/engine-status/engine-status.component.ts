@@ -42,7 +42,7 @@ export class EngineStatusComponent implements OnInit, OnDestroy {
   }
 
   reconnect() {
-    this.api.connect(this.api.coreAddress!);
+    this.api.connect(this.api.websocketUrl!);
   }
 
   disconnect() {

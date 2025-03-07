@@ -37,8 +37,8 @@ export class ConnectComponent implements OnInit {
         this.showFailed = true;
       }
     });
-    if (this.api.coreAddress) {
-      this.ipAddress.setValue(this.api.coreAddress);
+    if (this.api.websocketUrl) {
+      this.ipAddress.setValue(this.api.websocketUrl);
     }
   }
 

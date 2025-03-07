@@ -342,18 +342,51 @@ export class QsysLibService implements OnDestroy {
   private designCode: string | undefined;
   private pollInternalTimeout: any;
 
+  // Store the websocket URL directly
+  private _websocketUrl: string | undefined;
+
   constructor() { }
 
   /**
-   * Connect to a QSys Core
-   * @param ipAddressOrHostname The IP address or hostname of the QSys Core
+   * Format a websocket URL from an IP address or hostname
+   * @param addressOrPath IP address, hostname, or path (starting with /)
+   * @returns Formatted websocket URL
    */
-  public connect(ipAddressOrHostname: string, maxReconnectionAttempts = 0): void {
+  public static formatWebsocketUrl(addressOrPath: string): string {
+    // If it starts with a slash, use the current host
+    if (addressOrPath.startsWith('/')) {
+      const currentHost = typeof window !== 'undefined' ? window.location.host : '';
+      return `wss://${currentHost}${addressOrPath}`;
+    }
+
+    // Otherwise, remove any protocol prefixes if they exist
+    const cleanAddress = addressOrPath.replace(/^(https?:\/\/|wss?:\/\/)/i, '');
+    return `wss://${cleanAddress}/qrc`;
+  }
+
+  /**
+   * Connect to a QSys Core
+   * @param addressOrUrl The address, path, or complete websocket URL
+   *                     - IP/hostname: will be converted to wss://address/qrc
+   *                     - Path (starts with /): will use current host with the path
+   *                     - Full URL: used directly
+   * @param maxReconnectionAttempts Maximum number of reconnection attempts (0 for infinite)
+   */
+  public connect(addressOrUrl: string, maxReconnectionAttempts = 0): void {
     this.maxReconnectionAttempts = maxReconnectionAttempts;
-    this.coreAddress = ipAddressOrHostname;
-    console.log('Connecting to QSys Core at', this.coreAddress);
-    if (!this.coreAddress) {
-      console.error('Cannot connect: no IP address provided');
+
+    // Determine if the input is a complete URL or needs formatting
+    if (addressOrUrl.startsWith('ws://') || addressOrUrl.startsWith('wss://')) {
+      // Complete URL, use as is
+      this._websocketUrl = addressOrUrl;
+    } else {
+      // Format the URL based on whether it's a path or address
+      this._websocketUrl = QsysLibService.formatWebsocketUrl(addressOrUrl);
+    }
+
+    console.log('Connecting to QSys Core at', this._websocketUrl);
+    if (!this._websocketUrl) {
+      console.error('Cannot connect: no address provided');
       return;
     }
 
@@ -364,10 +397,24 @@ export class QsysLibService implements OnDestroy {
     this.setupSocketConnection();
   }
 
+  /**
+   * Get the current websocket URL
+   */
+  public get websocketUrl(): string | undefined {
+    return this._websocketUrl;
+  }
+
+  /**
+   * Set the websocket URL directly
+   */
+  public set websocketUrl(url: string | undefined) {
+    this._websocketUrl = url;
+  }
+
   public disconnect(): void {
     // Prevent any further reconnection attempts
     this.reconnecting = false;
-    this.coreAddress = undefined;
+    this._websocketUrl = undefined;
 
     // Cancel any pending reconnections
     this.reconnectionAttempts = Number.MAX_SAFE_INTEGER;
@@ -385,8 +432,6 @@ export class QsysLibService implements OnDestroy {
     // Don't emit on destroy$ yet (this would terminate everything including this method)
     // Instead, only emit if we're truly destroying the service
   }
-
-  public coreAddress: string | undefined;
 
   /**
    * Get observable of connection status
@@ -483,10 +528,13 @@ export class QsysLibService implements OnDestroy {
       this.socket$.complete();
     }
 
-    const url = `wss://${this.coreAddress}/qrc`;
+    if (!this._websocketUrl) {
+      console.error('Cannot connect: no websocket URL provided');
+      return;
+    }
 
     this.socket$ = webSocket({
-      url,
+      url: this._websocketUrl,
       deserializer: (e) => JSON.parse(e.data),
       serializer: (value) => JSON.stringify(value),
       openObserver: {
