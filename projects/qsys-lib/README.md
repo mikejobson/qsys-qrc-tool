@@ -47,20 +47,27 @@ export class YourComponent {
 ### Connecting to a Q-Sys Core
 
 ```typescript
-// Connect to a Q-Sys Core with IP address or hostname
-this.qsys.connect("192.168.1.100");
-// Formats to "wss://192.168.1.100/qrc"
+// Connect directly with a raw WebSocket URL - no automatic formatting
+this.qsys.connect("wss://192.168.1.100/qrc");
 
-// Connect using a path - uses the current host with the specified path
-this.qsys.connect("/api/qrc");
-// Formats to "wss://current.host.com/api/qrc"
+// For convenience, you can use the formatWebsocketUrl helper:
+// 1. Connect with an IP address or hostname
+const formattedUrl = QsysLibService.formatWebsocketUrl("192.168.1.100");
+this.qsys.connect(formattedUrl);
+// Connects to "wss://192.168.1.100/qrc"
 
-// Specify the full WebSocket URL directly
-this.qsys.connect("wss://my-qsys-core.example.com/qrc");
+// 2. Connect using a path - uses the current host with the specified path
+const pathUrl = QsysLibService.formatWebsocketUrl("/api/qrc");
+this.qsys.connect(pathUrl);
+// Formats to "wss://current.host.com/api/qrc" or "ws://current.host.com/api/qrc"
 
-// Use the static helper method to format the URL
-const wsUrl = QsysLibService.formatWebsocketUrl("192.168.1.100");
-this.qsys.connect(wsUrl);
+// 3. Preserve existing protocols
+const wsUrl = QsysLibService.formatWebsocketUrl("ws://my-qsys-core.example.com/qrc");
+this.qsys.connect(wsUrl); // Uses ws: (unsecure)
+
+// 4. Convert HTTP URLs to WebSocket URLs
+const httpUrl = QsysLibService.formatWebsocketUrl("http://my-qsys-core.example.com/qrc");
+this.qsys.connect(httpUrl); // Converts to "ws://"
 
 // Get the current WebSocket URL
 console.log(this.qsys.websocketUrl);
@@ -70,7 +77,7 @@ this.qsys.websocketUrl = "wss://another-core.example.com/qrc";
 this.qsys.connect(this.qsys.websocketUrl);
 
 // Optional parameter for maximum reconnection attempts (default is 0 - infinite attempts)
-this.qsys.connect("192.168.1.100", 5);
+this.qsys.connect("wss://192.168.1.100/qrc", 5);
 
 // Monitor connection status
 this.qsys.getConnectionStatus().subscribe((status) => {

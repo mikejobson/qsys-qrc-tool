@@ -348,7 +348,8 @@ export class QsysLibService implements OnDestroy {
   constructor() { }
 
   /**
-   * Format a websocket URL from an IP address or hostname
+   * Format a websocket URL from an IP address, hostname, or path
+   * Helper method that can be used to format URLs before connecting
    * @param addressOrPath IP address, hostname, or path (starting with /)
    * @returns Formatted websocket URL
    */
@@ -356,37 +357,47 @@ export class QsysLibService implements OnDestroy {
     // If it starts with a slash, use the current host
     if (addressOrPath.startsWith('/')) {
       const currentHost = typeof window !== 'undefined' ? window.location.host : '';
-      return `wss://${currentHost}${addressOrPath}`;
+      const protocol = typeof window !== 'undefined' && window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+      return `${protocol}//${currentHost}${addressOrPath}`;
     }
 
-    // Otherwise, remove any protocol prefixes if they exist
-    const cleanAddress = addressOrPath.replace(/^(https?:\/\/|wss?:\/\/)/i, '');
-    return `wss://${cleanAddress}/qrc`;
+    // Check if input already specifies a ws or wss protocol
+    const wsMatch = addressOrPath.match(/^(ws|wss):\/\//i);
+    if (wsMatch) {
+      // Preserve the specified protocol (ws or wss)
+      const protocol = wsMatch[1].toLowerCase();
+      const cleanAddress = addressOrPath.substring(wsMatch[0].length);
+      return `${protocol}://${cleanAddress}`;
+    }
+
+    // Handle case where http or https protocol might be specified
+    if (addressOrPath.startsWith('http://')) {
+      const cleanAddress = addressOrPath.substring(7);
+      return `ws://${cleanAddress}`;
+    } else if (addressOrPath.startsWith('https://')) {
+      const cleanAddress = addressOrPath.substring(8);
+      return `wss://${cleanAddress}`;
+    }
+
+    // No protocol specified, default to secure WebSocket (wss)
+    return `wss://${addressOrPath}/qrc`;
   }
 
   /**
    * Connect to a QSys Core
-   * @param addressOrUrl The address, path, or complete websocket URL
-   *                     - IP/hostname: will be converted to wss://address/qrc
-   *                     - Path (starts with /): will use current host with the path
-   *                     - Full URL: used directly
+   * @param url The WebSocket URL to connect to. Use as provided without modification.
+   *            Use formatWebsocketUrl() helper to format URLs if needed.
    * @param maxReconnectionAttempts Maximum number of reconnection attempts (0 for infinite)
    */
-  public connect(addressOrUrl: string, maxReconnectionAttempts = 0): void {
+  public connect(url: string, maxReconnectionAttempts = 0): void {
     this.maxReconnectionAttempts = maxReconnectionAttempts;
 
-    // Determine if the input is a complete URL or needs formatting
-    if (addressOrUrl.startsWith('ws://') || addressOrUrl.startsWith('wss://')) {
-      // Complete URL, use as is
-      this._websocketUrl = addressOrUrl;
-    } else {
-      // Format the URL based on whether it's a path or address
-      this._websocketUrl = QsysLibService.formatWebsocketUrl(addressOrUrl);
-    }
+    // Store the URL directly without modification
+    this._websocketUrl = url;
 
     console.log('Connecting to QSys Core at', this._websocketUrl);
     if (!this._websocketUrl) {
-      console.error('Cannot connect: no address provided');
+      console.error('Cannot connect: no URL provided');
       return;
     }
 
