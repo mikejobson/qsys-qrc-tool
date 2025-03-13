@@ -22,7 +22,7 @@ Users should use this tool at their own risk and discretion.
 
 ### Using the Online Version
 
-The latest version is always available at: [https://qrc-tool.example.com](https://qrc-tool.example.com)
+The latest version is always available at: [https://mikejobson.github.io/qsys-qrc-tool/](https://mikejobson.github.io/qsys-qrc-tool/)
 
 ### Running Locally with Docker
 
